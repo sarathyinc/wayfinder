@@ -1,7 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { loadGraph, validateGraph, CapabilityGraphSchema } from "./index.js";
+import {
+  loadGraph,
+  validateGraph,
+  CapabilityGraphSchema,
+  filterGraphForPersonas,
+  matchDeterministic,
+  handleAssistChat,
+  hashString,
+} from "./index.js";
 
 const examplePath = fileURLToPath(
   new URL("../examples/capability_graph.example.json", import.meta.url),
@@ -12,6 +20,12 @@ describe("public API", () => {
     expect(typeof loadGraph).toBe("function");
     expect(typeof validateGraph).toBe("function");
     expect(CapabilityGraphSchema).toBeDefined();
+
+    // Phase 1 additions
+    expect(typeof filterGraphForPersonas).toBe("function");
+    expect(typeof matchDeterministic).toBe("function");
+    expect(typeof handleAssistChat).toBe("function");
+    expect(typeof hashString).toBe("function");
   });
 
   it("validates the shipped example graph", () => {

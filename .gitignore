@@ -1,6 +1,28 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
+.next/
 .turbo/
 *.tsbuildinfo
 
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS generated files
+.DS_Store
+
+# Project temp directories
 temp/
+
+# Local AI / agent tooling (metrics, history, etc.)
+.claude/

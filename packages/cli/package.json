@@ -1,31 +1,29 @@
 {
-  "name": "@wayfinder/core",
+  "name": "@wayfinder/cli",
   "version": "0.0.0",
   "type": "module",
+  "bin": {
+    "assist": "./dist/index.js"
+  },
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
-    },
-    "./package.json": "./package.json",
-    "./schema/capability-graph.schema.json": "./schema/capability-graph.schema.json"
+      "import": "./dist/index.js"
+    }
   },
-  "files": [
-    "dist",
-    "schema"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "schema:emit": "tsx scripts/emit-json-schema.ts"
+    "dev:assist": "tsx src/index.ts"
   },
   "dependencies": {
-    "zod": "^4.0.0"
+    "@wayfinder/core": "workspace:*",
+    "@wayfinder/providers": "workspace:*",
+    "cac": "^6.7.14"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

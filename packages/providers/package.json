@@ -1,0 +1,31 @@
+{
+  "name": "@wayfinder/providers",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "openai": "^6.45.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@wayfinder/core": "workspace:*",
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
+  }
+}

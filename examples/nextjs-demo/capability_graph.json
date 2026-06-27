@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "defaultLocale": "en",
+  "pages": [
+    { "routeKey": "/inbox", "title": "Inbox", "personas": ["intake_admin"], "available": true },
+    { "routeKey": "/donors", "title": "Donor Records", "personas": ["intake_admin", "admin"], "available": true }
+  ],
+  "actions": [
+    {
+      "id": "inbox.view",
+      "route": "/inbox",
+      "label": "View inbox",
+      "personas": ["intake_admin"],
+      "effect": "navigate",
+      "params": [],
+      "synonyms": [],
+      "steps": ["Go to inbox"],
+      "spotlight": [],
+      "execution": null
+    },
+    {
+      "id": "donors.create",
+      "route": "/donors",
+      "label": "Log a new donor offer",
+      "personas": ["intake_admin", "admin"],
+      "effect": "write",
+      "params": [],
+      "synonyms": ["add donor", "new offer"],
+      "steps": ["Open Donor Records", "Click Create Donor", "Fill the form", "Save"],
+      "spotlight": ["donors-create-button"],
+      "execution": null
+    }
+  ],
+  "fields": [
+    {
+      "label": "Terminal Creatinine",
+      "page": "/donors",
+      "tab": "Labs",
+      "personas": ["intake_admin"],
+      "synonyms": ["creatinine"]
+    }
+  ],
+  "transitions": [],
+  "tasks": [
+    {
+      "id": "first-donor-offer",
+      "title": "Log your first donor offer",
+      "personas": ["intake_admin"],
+      "goal": "Get a donor offer into the system",
+      "sequence": ["inbox.view", "donors.create"],
+      "source": "suggested",
+      "confidence": 0.7
+    }
+  ]
+}
