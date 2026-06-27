@@ -17,4 +17,14 @@ export type {
   ManifestTransition,
 } from "./discover.js";
 
+// Reconciliation harness (report mode)
+export { diff } from "./reconcile/diff.js";
+export { buildReport } from "./reconcile/report.js";
+export { runReconciliation } from "./reconcile/harness.js";
+export type {
+  ControlSnapshot,
+  ReconcileResult,
+  ReconcileFinding,
+} from "./reconcile/types.js";
+
 // Providers are consumed via @wayfinder/providers at runtime (CLI/adapter host decides)
