@@ -1,0 +1,25 @@
+{
+  "name": "@wayfinder/adapter-remix",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wayfinder/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@remix-run/node": ">=2"
+  },
+  "peerDependenciesOptional": {
+    "@remix-run/node": true
+  }
+}

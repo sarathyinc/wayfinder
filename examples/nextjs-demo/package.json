@@ -1,0 +1,27 @@
+{
+  "name": "nextjs-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "assist:compile": "pnpm --filter @wayfinder/cli run dev:assist -- compile ."
+  },
+  "dependencies": {
+    "@wayfinder/adapter-nextjs": "workspace:*",
+    "@wayfinder/core": "workspace:*",
+    "@wayfinder/providers": "workspace:*",
+    "next": "15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
+  }
+}

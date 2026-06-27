@@ -1,0 +1,17 @@
+name: Drift Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install
+      - run: pnpm --filter @wayfinder/core build
+      - run: pnpm --filter @wayfinder/cli build
+      - run: pnpm --filter @wayfinder/cli run dev:assist -- gate .
+      # In real: only on the target app dir
