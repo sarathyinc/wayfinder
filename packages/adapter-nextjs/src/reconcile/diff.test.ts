@@ -79,10 +79,10 @@ describe("diff", () => {
     expect(result.staleSpotlight).toHaveLength(1);
     expect(result.staleSpotlight[0]!.id).toBe("dashboard.create");
     expect(result.staleSpotlight[0]!.route).toBe("/dashboard");
-    expect(result.missing).toHaveLength(0);
+    expect(result.orphaned).toHaveLength(0);
   });
 
-  it("snapshot with no matching graph action → in orphaned", () => {
+  it("snapshot with no matching graph action → in missing", () => {
     const graph = makeGraph([
       {
         id: "dashboard.view",
@@ -107,10 +107,34 @@ describe("diff", () => {
 
     const result = diff("user", snapshots, graph);
 
-    expect(result.orphaned).toHaveLength(1);
-    expect(result.orphaned[0]!.selector).toBe("[data-testid='mystery-btn']");
-    expect(result.orphaned[0]!.route).toBe("/dashboard");
+    expect(result.missing).toHaveLength(1);
+    expect(result.missing[0]!.selector).toBe("[data-testid='mystery-btn']");
+    expect(result.missing[0]!.route).toBe("/dashboard");
     // The matched action is fine
+    expect(result.staleSpotlight).toHaveLength(0);
+    expect(result.orphaned).toHaveLength(0);
+  });
+
+  it("graph action with spotlight selectors but no matching live snapshot → in orphaned (warn only)", () => {
+    const graph = makeGraph([
+      {
+        id: "profile.edit",
+        route: "/profile",
+        personas: ["user"],
+        // Blank/whitespace selectors are not syntactically valid, so this
+        // action cannot be matched — it ends up in orphaned, not staleSpotlight.
+        spotlight: ["   "],
+      },
+    ]);
+    // No snapshots at all for /profile
+    const snapshots: ControlSnapshot[] = [];
+
+    const result = diff("user", snapshots, graph);
+
+    // No valid selector → orphaned (graph entry with no live control, warn only)
+    expect(result.orphaned).toHaveLength(1);
+    expect(result.orphaned[0]!.id).toBe("profile.edit");
+    expect(result.orphaned[0]!.route).toBe("/profile");
     expect(result.staleSpotlight).toHaveLength(0);
     expect(result.missing).toHaveLength(0);
   });

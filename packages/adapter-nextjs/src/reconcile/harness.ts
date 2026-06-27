@@ -104,8 +104,9 @@ async function snapshotControls(
     const SELECTOR = 'button, [role="button"], a[href], input[type="submit"]';
     const elements = Array.from(document.querySelectorAll(SELECTOR));
 
-    return elements.map((el) => {
-      // Build a stable selector: prefer data-testid, then id, then tag+text
+    return elements.map((el, _globalIdx) => {
+      // Build a stable selector: prefer data-testid, then id, then positional
+      // fallback using nth-of-type to avoid non-unique bare tag selectors.
       let selector = "";
       const testId =
         el.getAttribute("data-testid") || el.getAttribute("data-test-id");
@@ -114,7 +115,15 @@ async function snapshotControls(
       } else if (el.id) {
         selector = `#${el.id}`;
       } else {
-        selector = el.tagName.toLowerCase();
+        const tag = el.tagName.toLowerCase();
+        // Count how many siblings of the same tag precede this element
+        // to produce a unique nth-of-type(n) selector.
+        const parent = el.parentElement;
+        const siblings = parent
+          ? Array.from(parent.children).filter((c) => c.tagName === el.tagName)
+          : [el];
+        const idx = siblings.indexOf(el) + 1; // nth-of-type is 1-based
+        selector = `${tag}:nth-of-type(${idx})`;
       }
 
       const role =

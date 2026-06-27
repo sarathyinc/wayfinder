@@ -7,9 +7,9 @@ export interface ControlSnapshot {
 
 export interface ReconcileResult {
   persona: string;
-  missing: ReconcileFinding[]; // live control not in graph
-  orphaned: ReconcileFinding[]; // graph entry, no live control (warn only)
-  staleSpotlight: ReconcileFinding[]; // spotlight target that doesn't resolve
+  missing: ReconcileFinding[]; // live snapshot with no matching graph action spotlight (warn only)
+  orphaned: ReconcileFinding[]; // graph action with spotlight but no matching live control (warn only)
+  staleSpotlight: ReconcileFinding[]; // graph action whose spotlight selectors are syntactically valid but unresolvable
 }
 
 export interface ReconcileFinding {

@@ -33,12 +33,14 @@ function looksLikeValidSelector(selector: string): boolean {
  * Diff live control snapshots against a persona's graph slice.
  *
  * Categories:
- * - missing: action has spotlight entries but none resolve to a snapshot on
- *   that route (live UI may be broken or the control was removed)
- * - staleSpotlight: same condition as missing when the selector is syntactically
- *   valid — indicates the graph has data but the selector is unresolvable
- * - orphaned: snapshot on a route with no matching action spotlight (the control
- *   exists live but was never catalogued in the graph — warn only)
+ * - missing: live snapshot whose selector+route combo doesn't match any
+ *   graph action spotlight (the control exists live but was never catalogued
+ *   — warn only)
+ * - orphaned: graph action with non-empty spotlight selectors where none of
+ *   the selectors match any live snapshot on that route (live UI may be
+ *   broken or the control was removed — warn only)
+ * - staleSpotlight: graph action whose spotlight selectors are syntactically
+ *   valid but don't resolve to any live control (selector is stale/broken)
  */
 export function diff(
   persona: string,
@@ -56,7 +58,7 @@ export function diff(
     snapshotsByRoute.get(snap.route)!.add(snap.selector);
   }
 
-  // Build a set of all selectors covered by graph actions (for orphan detection)
+  // Build a set of all selectors covered by graph actions (for missing detection)
   const coveredSelectors = new Set<string>();
   for (const action of actions) {
     for (const sel of action.spotlight) {
@@ -64,7 +66,7 @@ export function diff(
     }
   }
 
-  const missing: ReconcileFinding[] = [];
+  const orphaned: ReconcileFinding[] = [];
   const staleSpotlight: ReconcileFinding[] = [];
 
   for (const action of actions) {
@@ -89,17 +91,17 @@ export function diff(
       if (hasValidSelector) {
         staleSpotlight.push(finding);
       } else {
-        missing.push(finding);
+        orphaned.push(finding);
       }
     }
   }
 
-  // Orphaned: snapshots whose selector+route combo doesn't match any action spotlight
-  const orphaned: ReconcileFinding[] = [];
+  // Missing: snapshots whose selector+route combo doesn't match any action spotlight
+  const missing: ReconcileFinding[] = [];
   for (const snap of snapshots) {
     const key = `${snap.route}::${snap.selector}`;
     if (!coveredSelectors.has(key)) {
-      orphaned.push({
+      missing.push({
         selector: snap.selector,
         route: snap.route,
         message: `Live control "${snap.selector}" on route "${snap.route}" has no matching graph action spotlight`,
