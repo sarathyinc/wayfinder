@@ -21,6 +21,21 @@ function filterActionsForPersona(graph: CapabilityGraph, persona: string) {
 }
 
 /**
+ * Build a set of routeKeys that are marked available:false in the graph.
+ * Actions on these routes are expected-absent and should not generate
+ * orphaned/staleSpotlight findings.
+ */
+function buildUnavailableRoutes(graph: CapabilityGraph): Set<string> {
+  const unavailable = new Set<string>();
+  for (const page of graph.pages) {
+    if (!page.available) {
+      unavailable.add(page.routeKey);
+    }
+  }
+  return unavailable;
+}
+
+/**
  * Determine whether a selector string is syntactically valid (non-empty,
  * not obviously malformed).  This is intentionally lenient — we just
  * want to distinguish "has an entry" from "empty string".
@@ -48,6 +63,7 @@ export function diff(
   graph: CapabilityGraph,
 ): ReconcileResult {
   const actions = filterActionsForPersona(graph, persona);
+  const unavailableRoutes = buildUnavailableRoutes(graph);
 
   // Build a lookup: route → set of selectors seen in live snapshots
   const snapshotsByRoute = new Map<string, Set<string>>();
@@ -58,9 +74,11 @@ export function diff(
     snapshotsByRoute.get(snap.route)!.add(snap.selector);
   }
 
-  // Build a set of all selectors covered by graph actions (for missing detection)
+  // Build a set of all selectors covered by graph actions on *available* routes
+  // (for standard missing detection)
   const coveredSelectors = new Set<string>();
   for (const action of actions) {
+    if (unavailableRoutes.has(action.route)) continue;
     for (const sel of action.spotlight) {
       coveredSelectors.add(`${action.route}::${sel}`);
     }
@@ -72,6 +90,10 @@ export function diff(
   for (const action of actions) {
     // Actions with empty spotlight cannot be reconciled — skip
     if (action.spotlight.length === 0) continue;
+
+    // Routes marked available:false are expected to have no live controls —
+    // do NOT flag their actions as orphaned or staleSpotlight.
+    if (unavailableRoutes.has(action.route)) continue;
 
     const liveSelectors =
       snapshotsByRoute.get(action.route) ?? new Set<string>();
@@ -96,9 +118,19 @@ export function diff(
     }
   }
 
-  // Missing: snapshots whose selector+route combo doesn't match any action spotlight
+  // Missing: snapshots whose selector+route combo doesn't match any action spotlight.
+  // Special case: if a live snapshot's route is marked available:false in the graph,
+  // flag it with a note — a control was found live on a supposedly-unavailable route.
   const missing: ReconcileFinding[] = [];
   for (const snap of snapshots) {
+    if (unavailableRoutes.has(snap.route)) {
+      missing.push({
+        selector: snap.selector,
+        route: snap.route,
+        message: `Live control "${snap.selector}" on route "${snap.route}" found but route is marked available:false in graph`,
+      });
+      continue;
+    }
     const key = `${snap.route}::${snap.selector}`;
     if (!coveredSelectors.has(key)) {
       missing.push({

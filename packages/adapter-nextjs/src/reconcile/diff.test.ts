@@ -34,6 +34,43 @@ function makeGraph(
   };
 }
 
+// Graph factory with explicit page availability
+function makeGraphWithPages(
+  pages: Array<{ routeKey: string; available: boolean }>,
+  actions: Array<{
+    id: string;
+    route: string;
+    personas: string[];
+    spotlight: string[];
+  }>,
+): CapabilityGraph {
+  return {
+    version: 2,
+    defaultLocale: "en",
+    pages: pages.map((p) => ({
+      routeKey: p.routeKey,
+      title: p.routeKey,
+      personas: [],
+      available: p.available,
+    })),
+    actions: actions.map((a) => ({
+      id: a.id,
+      route: a.route,
+      label: a.id,
+      personas: a.personas,
+      effect: "navigate" as const,
+      params: [],
+      synonyms: [],
+      steps: [],
+      spotlight: a.spotlight,
+      execution: null,
+    })),
+    fields: [],
+    transitions: [],
+    tasks: [],
+  };
+}
+
 describe("diff", () => {
   it("action with spotlight has a matching snapshot → not in missing or staleSpotlight", () => {
     const graph = makeGraph([
@@ -205,5 +242,56 @@ describe("diff", () => {
     // admin.extra is unresolved → staleSpotlight
     expect(adminResult.staleSpotlight).toHaveLength(1);
     expect(adminResult.staleSpotlight[0]!.id).toBe("admin.extra");
+  });
+
+  // ---------------------------------------------------------------------------
+  // available: false — non-live route handling
+  // ---------------------------------------------------------------------------
+
+  it("action on available:false route is NOT flagged as orphaned when no snapshot exists", () => {
+    const graph = makeGraphWithPages(
+      [{ routeKey: "/_beta", available: false }],
+      [
+        {
+          id: "_beta.view",
+          route: "/_beta",
+          personas: ["user"],
+          spotlight: ["[data-testid='beta-btn']"],
+        },
+      ],
+    );
+    // No snapshots — route is not live
+    const result = diff("user", [], graph);
+
+    expect(result.orphaned).toHaveLength(0);
+    expect(result.staleSpotlight).toHaveLength(0);
+    expect(result.missing).toHaveLength(0);
+  });
+
+  it("snapshot matching an available:false route is flagged as missing with note", () => {
+    const graph = makeGraphWithPages(
+      [{ routeKey: "/_beta", available: false }],
+      [
+        {
+          id: "_beta.view",
+          route: "/_beta",
+          personas: ["user"],
+          spotlight: ["[data-testid='beta-btn']"],
+        },
+      ],
+    );
+    // A live snapshot was found for a route marked available:false
+    const snapshots: ControlSnapshot[] = [
+      { selector: "[data-testid='beta-btn']", route: "/_beta", role: "button" },
+    ];
+
+    const result = diff("user", snapshots, graph);
+
+    expect(result.missing).toHaveLength(1);
+    expect(result.missing[0]!.route).toBe("/_beta");
+    expect(result.missing[0]!.message).toMatch(/available:false/);
+    // The action itself should not appear as stale/orphaned
+    expect(result.staleSpotlight).toHaveLength(0);
+    expect(result.orphaned).toHaveLength(0);
   });
 });
