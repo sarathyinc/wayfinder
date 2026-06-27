@@ -264,6 +264,215 @@ describe("handleAssistChat", () => {
     }
   });
 
+  // G11: scale threshold
+  describe("scale threshold (G11)", () => {
+    function makeActions(n: number): CapabilityGraph["actions"] {
+      return Array.from({ length: n }, (_, i) => ({
+        id: `action-${i}`,
+        label: { en: `Action ${i}` },
+        route: `/page-${Math.floor(i / 5)}`,
+        steps: [],
+        effect: "read" as const,
+        execution: null,
+        available: true,
+        spotlight: null,
+        personas: ["intake_admin"],
+        params: [],
+        synonyms: [],
+      }));
+    }
+
+    function makePages(routes: string[]): CapabilityGraph["pages"] {
+      return routes.map((r) => ({
+        routeKey: r,
+        title: r,
+        personas: ["intake_admin"],
+        available: true,
+      }));
+    }
+
+    it("below threshold (5 actions) → LLM is called", async () => {
+      const actions = makeActions(5);
+      const uniqueRoutes = [...new Set(actions.map((a) => a.route))];
+      let llmCalled = false;
+      const provider: CompileProvider = {
+        ...mockProvider,
+        async matchIntent() {
+          llmCalled = true;
+          return { kind: "off_topic" };
+        },
+      };
+      const graph: CapabilityGraph = {
+        ...mockGraph,
+        pages: makePages(uniqueRoutes),
+        actions,
+        fields: [],
+      };
+      await handleAssistChat(
+        { query: "do something" },
+        {},
+        { graph, provider, getPersonas: () => ["intake_admin"] },
+      );
+      expect(llmCalled).toBe(true);
+    });
+
+    it("at threshold exactly 60 → LLM is called", async () => {
+      const actions = makeActions(60);
+      const uniqueRoutes = [...new Set(actions.map((a) => a.route))];
+      let llmCalled = false;
+      const provider: CompileProvider = {
+        ...mockProvider,
+        async matchIntent() {
+          llmCalled = true;
+          return { kind: "off_topic" };
+        },
+      };
+      const graph: CapabilityGraph = {
+        ...mockGraph,
+        pages: makePages(uniqueRoutes),
+        actions,
+        fields: [],
+      };
+      await handleAssistChat(
+        { query: "do something" },
+        {},
+        { graph, provider, getPersonas: () => ["intake_admin"] },
+      );
+      expect(llmCalled).toBe(true);
+    });
+
+    it("above threshold (61 actions) → disambiguate returned; LLM NOT called", async () => {
+      const actions = makeActions(61);
+      const uniqueRoutes = [...new Set(actions.map((a) => a.route))];
+      let llmCalled = false;
+      const provider: CompileProvider = {
+        ...mockProvider,
+        async matchIntent() {
+          llmCalled = true;
+          return { kind: "off_topic" };
+        },
+      };
+      const graph: CapabilityGraph = {
+        ...mockGraph,
+        pages: makePages(uniqueRoutes),
+        actions,
+        fields: [],
+      };
+      const res = await handleAssistChat(
+        { query: "do something" },
+        {},
+        { graph, provider, getPersonas: () => ["intake_admin"] },
+      );
+      expect(llmCalled).toBe(false);
+      expect(res.kind).toBe("disambiguate");
+      if (res.kind === "disambiguate") {
+        expect(res.candidates.every((c) => c.kind === "page")).toBe(true);
+      }
+    });
+
+    it("custom threshold (maxInlineCandidates: 3), 4 actions → disambiguate; LLM NOT called", async () => {
+      const actions = makeActions(4);
+      const uniqueRoutes = [...new Set(actions.map((a) => a.route))];
+      let llmCalled = false;
+      const provider: CompileProvider = {
+        ...mockProvider,
+        async matchIntent() {
+          llmCalled = true;
+          return { kind: "off_topic" };
+        },
+      };
+      const graph: CapabilityGraph = {
+        ...mockGraph,
+        pages: makePages(uniqueRoutes),
+        actions,
+        fields: [],
+      };
+      const res = await handleAssistChat(
+        { query: "do something" },
+        {},
+        {
+          graph,
+          provider,
+          getPersonas: () => ["intake_admin"],
+          maxInlineCandidates: 3,
+        },
+      );
+      expect(llmCalled).toBe(false);
+      expect(res.kind).toBe("disambiguate");
+    });
+
+    it("pages are deduplicated and sorted — 10 actions across 3 routes → 3 unique pages in alphabetical order", async () => {
+      // Explicitly build actions with known, non-sequential routes
+      const actions: CapabilityGraph["actions"] = [
+        ...Array.from({ length: 4 }, (_, i) => ({
+          id: `a-${i}`,
+          label: { en: `A ${i}` },
+          route: "/route-c",
+          steps: [],
+          effect: "read" as const,
+          execution: null,
+          available: true,
+          spotlight: null,
+          personas: ["intake_admin"],
+          params: [],
+          synonyms: [],
+        })),
+        ...Array.from({ length: 3 }, (_, i) => ({
+          id: `b-${i}`,
+          label: { en: `B ${i}` },
+          route: "/route-a",
+          steps: [],
+          effect: "read" as const,
+          execution: null,
+          available: true,
+          spotlight: null,
+          personas: ["intake_admin"],
+          params: [],
+          synonyms: [],
+        })),
+        ...Array.from({ length: 3 }, (_, i) => ({
+          id: `c-${i}`,
+          label: { en: `C ${i}` },
+          route: "/route-b",
+          steps: [],
+          effect: "read" as const,
+          execution: null,
+          available: true,
+          spotlight: null,
+          personas: ["intake_admin"],
+          params: [],
+          synonyms: [],
+        })),
+      ];
+      const graph: CapabilityGraph = {
+        ...mockGraph,
+        pages: makePages(["/route-a", "/route-b", "/route-c"]),
+        actions,
+        fields: [],
+      };
+      const res = await handleAssistChat(
+        { query: "do something" },
+        {},
+        {
+          graph,
+          provider: mockProvider,
+          getPersonas: () => ["intake_admin"],
+          maxInlineCandidates: 3,
+        },
+      );
+      expect(res.kind).toBe("disambiguate");
+      if (res.kind === "disambiguate") {
+        expect(res.candidates).toHaveLength(3);
+        expect(res.candidates.map((c) => c.page)).toEqual([
+          "/route-a",
+          "/route-b",
+          "/route-c",
+        ]);
+        expect(res.candidates.every((c) => c.kind === "page")).toBe(true);
+      }
+    });
+  });
+
   // G8: ASSIST_AGENTIC_ENABLED kill-switch
   describe("agentic kill-switch (G8)", () => {
     const driveProvider: CompileProvider = {

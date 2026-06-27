@@ -4,6 +4,8 @@ import type { AssistChatRequest, AssistChatResponse } from "./types.js";
 import { filterGraphForPersonas } from "./types.js";
 import { matchDeterministic } from "./matcher.js";
 
+const DEFAULT_MAX_INLINE = 60;
+
 export interface HandleAssistContext {
   graph: CapabilityGraph;
   provider: CompileProvider;
@@ -12,6 +14,13 @@ export interface HandleAssistContext {
    * Never trust the client.
    */
   getPersonas(session: unknown): string[];
+  /**
+   * Maximum number of filtered actions to pass inline to the LLM.
+   * When `filtered.actions.length` exceeds this value, the handler skips
+   * the LLM call and returns a page-level disambiguation instead.
+   * Defaults to DEFAULT_MAX_INLINE (60).
+   */
+  maxInlineCandidates?: number;
 }
 
 export async function handleAssistChat(
@@ -27,13 +36,29 @@ export async function handleAssistChat(
     return { kind: "refuse", reason: "off_topic" };
   }
 
-  // 2. Deterministic matcher (fast path, no LLM)
+  // 2. Scale threshold guard (G11): skip LLM when candidate set is too large
+  const maxInline = ctx.maxInlineCandidates ?? DEFAULT_MAX_INLINE;
+  if (filtered.actions.length > maxInline) {
+    const uniquePages = [
+      ...new Set(filtered.actions.map((a) => a.route)),
+    ].sort();
+    return {
+      kind: "disambiguate",
+      candidates: uniquePages.map((page) => ({
+        label: { en: page },
+        page,
+        kind: "page" as const,
+      })),
+    };
+  }
+
+  // 3. Deterministic matcher (fast path, no LLM)
   const det = matchDeterministic(req.query, filtered);
   if (det) {
     return det as AssistChatResponse;
   }
 
-  // 3. LLM fallback (only on filtered candidates)
+  // 4. LLM fallback (only on filtered candidates)
   const candidates = {
     actions: filtered.actions.map((a) => ({
       id: a.id,
