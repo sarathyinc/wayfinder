@@ -40,7 +40,7 @@ async function loadAnnotationsFile(root: string): Promise<void> {
       console.warn(
         `[wayfinder] Warning: failed to load annotations file "${annotationsPath}": ${err}`,
       );
-      return null;
+      return;
     }
     return; // only load the first match
   }
@@ -134,8 +134,9 @@ export async function compileCommand(
     });
   }
 
-  // Compute real structure hash from the built graph structure
-  const structureHash = computeGraphStructureHash({
+  // Stash suggested tasks before annotation merge; the cache invalidation check
+  // uses a temporary hash so we can re-run suggestTasks when routes change.
+  const preAnnotationHash = computeGraphStructureHash({
     version: 2,
     defaultLocale: "en",
     pages,
@@ -146,7 +147,7 @@ export async function compileCommand(
   });
 
   // Only re-run flow pass when structure has changed
-  if (cache.tasks?.structureHash !== structureHash) {
+  if (cache.tasks?.structureHash !== preAnnotationHash) {
     const suggested = await provider.suggestTasks({
       actions: actions.map((a) => ({
         id: a.id,
@@ -157,7 +158,7 @@ export async function compileCommand(
       personas: ["user", "intake_admin", "admin"],
     });
     cache.tasks = {
-      structureHash,
+      structureHash: preAnnotationHash,
       tasks: suggested.map((s) => ({ ...s, source: "suggested" as const })),
     };
   }
@@ -207,6 +208,22 @@ export async function compileCommand(
       source: "annotated" as const,
       confidence: ann.confidence,
     });
+  }
+
+  // Compute the final structure hash AFTER annotation merge so that gate.ts
+  // (which also computes the hash post-annotation) stays in sync.
+  const structureHash = computeGraphStructureHash({
+    version: 2,
+    defaultLocale: "en",
+    pages,
+    actions,
+    fields,
+    transitions,
+    tasks: [],
+  });
+  // Update the cached hash to the post-annotation value.
+  if (cache.tasks) {
+    cache.tasks.structureHash = structureHash;
   }
 
   const graph: CapabilityGraph = {
