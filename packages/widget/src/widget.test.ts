@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import "./assist-widget.js";
+import type { ProgressProvider } from "./progress-provider.js";
 
 // Mock fetch globally
 globalThis.fetch = vi.fn();
@@ -86,6 +87,11 @@ describe("AssistWidget", () => {
         { label: { en: "Page B" }, kind: "page" },
       ],
     };
+    // First fetch = tasks endpoint (returns empty tasks to avoid interference)
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve({ tasks: [], graphHash: "h1" }),
+    });
+    // Second fetch = chat endpoint
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: () => Promise.resolve(mockResponse),
     });
@@ -140,6 +146,11 @@ describe("AssistWidget", () => {
       actionId: "donors.add",
       prefill: {},
     };
+    // First fetch = tasks endpoint
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve({ tasks: [], graphHash: "h1" }),
+    });
+    // Second fetch = chat endpoint
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: () => Promise.resolve(mockResponse),
     });
@@ -199,5 +210,285 @@ describe("AssistWidget", () => {
     // If duplicate define existed without guard, import would have thrown
     // We just verify we can import without errors and it's defined once
     expect(existingClass).toBeTruthy();
+  });
+
+  // ── G10: Persona-driven onboarding ──────────────────────────────────────
+
+  // Test G10-1: Checklist loads from endpoint — 2 tasks → 2 <li> items
+  it("G10: checklist renders tasks loaded from endpoint", async () => {
+    const mockTasksResponse = {
+      tasks: [
+        {
+          id: "task-1",
+          title: { en: "Log your first donor" },
+          sequence: ["action-1"],
+        },
+        {
+          id: "task-2",
+          title: { en: "Review a match" },
+          sequence: ["action-2"],
+        },
+      ],
+      graphHash: "hash-abc",
+    };
+
+    // Mock fetch: first call = tasks endpoint
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve(mockTasksResponse),
+    });
+
+    const el = document.createElement("assist-widget") as HTMLElement & {
+      setProgressProvider: (p: ProgressProvider) => void;
+    };
+    // Inject a no-op progress provider (no real localStorage needed)
+    el.setProgressProvider({
+      isComplete: () => false,
+      markComplete: () => undefined,
+      getGraphHash: () => "hash-abc",
+      setGraphHash: () => undefined,
+      reset: () => undefined,
+    });
+    document.body.appendChild(el);
+
+    // Open the widget to trigger lazy load
+    const launcher = el.shadowRoot?.querySelector(
+      "#launcher",
+    ) as HTMLButtonElement;
+    launcher?.click();
+
+    // Wait for onboarding to render
+    await vi.waitFor(
+      () => {
+        const items = el.shadowRoot?.querySelectorAll(
+          "#onboarding li[data-task-id]",
+        );
+        expect(items?.length).toBe(2);
+      },
+      { timeout: 2000 },
+    );
+
+    const items = el.shadowRoot?.querySelectorAll(
+      "#onboarding li[data-task-id]",
+    );
+    expect(items?.length).toBe(2);
+    expect(items?.[0]?.querySelector("button")?.textContent?.trim()).toBe(
+      "Log your first donor",
+    );
+    expect(items?.[1]?.querySelector("button")?.textContent?.trim()).toBe(
+      "Review a match",
+    );
+  });
+
+  // Test G10-2: Completed tasks show as checked
+  it("G10: completed tasks show checkbox as checked", async () => {
+    const mockTasksResponse = {
+      tasks: [
+        {
+          id: "task-complete",
+          title: { en: "Already done" },
+          sequence: [],
+        },
+        {
+          id: "task-pending",
+          title: { en: "Not yet" },
+          sequence: [],
+        },
+      ],
+      graphHash: "hash-xyz",
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve(mockTasksResponse),
+    });
+
+    const el = document.createElement("assist-widget") as HTMLElement & {
+      setProgressProvider: (p: ProgressProvider) => void;
+    };
+    el.setProgressProvider({
+      isComplete: (id: string) => id === "task-complete",
+      markComplete: () => undefined,
+      getGraphHash: () => "hash-xyz",
+      setGraphHash: () => undefined,
+      reset: () => undefined,
+    });
+    document.body.appendChild(el);
+
+    const launcher = el.shadowRoot?.querySelector(
+      "#launcher",
+    ) as HTMLButtonElement;
+    launcher?.click();
+
+    await vi.waitFor(
+      () => {
+        const items = el.shadowRoot?.querySelectorAll(
+          "#onboarding li[data-task-id]",
+        );
+        expect(items?.length).toBe(2);
+      },
+      { timeout: 2000 },
+    );
+
+    const completedLi = el.shadowRoot?.querySelector(
+      '#onboarding li[data-task-id="task-complete"]',
+    );
+    const pendingLi = el.shadowRoot?.querySelector(
+      '#onboarding li[data-task-id="task-pending"]',
+    );
+    const completedCb = completedLi?.querySelector(
+      "input[type=checkbox]",
+    ) as HTMLInputElement | null;
+    const pendingCb = pendingLi?.querySelector(
+      "input[type=checkbox]",
+    ) as HTMLInputElement | null;
+
+    expect(completedCb?.checked).toBe(true);
+    expect(pendingCb?.checked).toBe(false);
+  });
+
+  // Test G10-3: Clicking Start button dispatches wayfinder:tour-start
+  it("G10: clicking task Start button dispatches wayfinder:tour-start", async () => {
+    const mockTasksResponse = {
+      tasks: [
+        {
+          id: "task-tour",
+          title: { en: "Take the tour" },
+          sequence: ["step-1", "step-2"],
+        },
+      ],
+      graphHash: "hash-tour",
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve(mockTasksResponse),
+    });
+
+    const el = document.createElement("assist-widget") as HTMLElement & {
+      setProgressProvider: (p: ProgressProvider) => void;
+    };
+    el.setProgressProvider({
+      isComplete: () => false,
+      markComplete: () => undefined,
+      getGraphHash: () => "hash-tour",
+      setGraphHash: () => undefined,
+      reset: () => undefined,
+    });
+    document.body.appendChild(el);
+
+    const tourEvents: CustomEvent[] = [];
+    el.addEventListener("wayfinder:tour-start", (e) => {
+      tourEvents.push(e as CustomEvent);
+    });
+
+    const launcher = el.shadowRoot?.querySelector(
+      "#launcher",
+    ) as HTMLButtonElement;
+    launcher?.click();
+
+    await vi.waitFor(
+      () => {
+        const btn = el.shadowRoot?.querySelector("button.task-start");
+        expect(btn).toBeTruthy();
+      },
+      { timeout: 2000 },
+    );
+
+    const startBtn = el.shadowRoot?.querySelector(
+      "button.task-start",
+    ) as HTMLButtonElement;
+    startBtn?.click();
+
+    expect(tourEvents.length).toBe(1);
+    expect(tourEvents[0].detail.taskId).toBe("task-tour");
+    expect(tourEvents[0].detail.sequence).toEqual(["step-1", "step-2"]);
+  });
+
+  // Test G10-4: Re-onboard on graph hash change — reset called, setGraphHash called
+  it("G10: re-onboards when graph hash changes", async () => {
+    const mockTasksResponse = {
+      tasks: [{ id: "task-new", title: { en: "New task" }, sequence: [] }],
+      graphHash: "hash-new",
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve(mockTasksResponse),
+    });
+
+    const resetSpy = vi.fn();
+    const setGraphHashSpy = vi.fn();
+    const markCompleteSpy = vi.fn();
+
+    const el = document.createElement("assist-widget") as HTMLElement & {
+      setProgressProvider: (p: ProgressProvider) => void;
+    };
+    el.setProgressProvider({
+      isComplete: () => false,
+      markComplete: markCompleteSpy,
+      getGraphHash: () => "hash-old", // stored hash differs from response
+      setGraphHash: setGraphHashSpy,
+      reset: resetSpy,
+    });
+    document.body.appendChild(el);
+
+    const launcher = el.shadowRoot?.querySelector(
+      "#launcher",
+    ) as HTMLButtonElement;
+    launcher?.click();
+
+    await vi.waitFor(
+      () => {
+        expect(setGraphHashSpy).toHaveBeenCalledWith("hash-new");
+      },
+      { timeout: 2000 },
+    );
+
+    expect(resetSpy).toHaveBeenCalledOnce();
+    expect(setGraphHashSpy).toHaveBeenCalledWith("hash-new");
+    // markComplete should NOT have been called (fresh start)
+    expect(markCompleteSpy).not.toHaveBeenCalled();
+  });
+
+  // Test G10-5: No hardcoded tasks — empty endpoint → empty checklist
+  it("G10: empty tasks endpoint yields empty checklist", async () => {
+    const mockTasksResponse = {
+      tasks: [],
+      graphHash: "hash-empty",
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: () => Promise.resolve(mockTasksResponse),
+    });
+
+    const el = document.createElement("assist-widget") as HTMLElement & {
+      setProgressProvider: (p: ProgressProvider) => void;
+    };
+    el.setProgressProvider({
+      isComplete: () => false,
+      markComplete: () => undefined,
+      getGraphHash: () => "hash-empty",
+      setGraphHash: () => undefined,
+      reset: () => undefined,
+    });
+    document.body.appendChild(el);
+
+    const launcher = el.shadowRoot?.querySelector(
+      "#launcher",
+    ) as HTMLButtonElement;
+    launcher?.click();
+
+    // Wait a tick for the async loadTasks to complete
+    await vi.waitFor(
+      () => {
+        expect(globalThis.fetch).toHaveBeenCalled();
+      },
+      { timeout: 2000 },
+    );
+
+    // Give renderOnboarding a chance to run
+    await new Promise((r) => setTimeout(r, 50));
+
+    const items = el.shadowRoot?.querySelectorAll(
+      "#onboarding li[data-task-id]",
+    );
+    expect(items?.length ?? 0).toBe(0);
   });
 });

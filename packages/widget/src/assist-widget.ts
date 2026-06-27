@@ -1,3 +1,8 @@
+import {
+  LocalStorageProgressProvider,
+  type ProgressProvider,
+} from "./progress-provider.js";
+
 type LocalizedText = Record<string, string>;
 
 type DisambiguateCandidate = {
@@ -15,6 +20,19 @@ type AssistResponse =
   | { kind: "drive"; actionId: string; prefill: Record<string, string> }
   | { kind: "refuse"; reason: string };
 
+interface OnboardingTask {
+  id: string;
+  title: LocalizedText;
+  goal?: LocalizedText;
+  sequence: string[];
+  graphHash?: string;
+}
+
+interface TasksResponse {
+  tasks: OnboardingTask[];
+  graphHash: string;
+}
+
 function localizedLabel(label: LocalizedText): string {
   return label.en ?? Object.values(label)[0] ?? "?";
 }
@@ -24,17 +42,25 @@ export class AssistWidget extends HTMLElement {
   private open = false;
   private messages: Array<{ role: string; content: string }> = [];
   private endpoint = "/api/assist/chat";
+  private tasksEndpoint = "/api/assist/tasks";
   // Pending drive action waiting for user confirmation
   private pendingDrive: {
     actionId: string;
     prefill: Record<string, string>;
   } | null = null;
+  // Onboarding state — loaded lazily on first open
+  private tasks: OnboardingTask[] | null = null;
+  private progressProvider: ProgressProvider =
+    new LocalStorageProgressProvider();
 
   constructor() {
     super();
     this.shadow = this.attachShadow({ mode: "open" });
     if (this.getAttribute("data-endpoint")) {
       this.endpoint = this.getAttribute("data-endpoint")!;
+    }
+    if (this.getAttribute("data-tasks-endpoint")) {
+      this.tasksEndpoint = this.getAttribute("data-tasks-endpoint")!;
     }
     this.render();
   }
@@ -43,12 +69,96 @@ export class AssistWidget extends HTMLElement {
     this.shadow.addEventListener("click", this.handleClick as EventListener);
     this.shadow.addEventListener("keydown", this.handleKey as EventListener);
     document.addEventListener("keydown", this.handleDocKey as EventListener);
+    this.addEventListener(
+      "wayfinder:tour-complete",
+      this.handleTourComplete as EventListener,
+    );
   }
 
   disconnectedCallback() {
     this.shadow.removeEventListener("click", this.handleClick as EventListener);
     this.shadow.removeEventListener("keydown", this.handleKey as EventListener);
     document.removeEventListener("keydown", this.handleDocKey as EventListener);
+    this.removeEventListener(
+      "wayfinder:tour-complete",
+      this.handleTourComplete as EventListener,
+    );
+  }
+
+  /** Allow tests/host to inject a custom ProgressProvider */
+  setProgressProvider(provider: ProgressProvider): void {
+    this.progressProvider = provider;
+  }
+
+  private handleTourComplete = (e: Event) => {
+    const detail = (e as CustomEvent<{ taskId: string }>).detail;
+    if (detail?.taskId) {
+      this.progressProvider.markComplete(detail.taskId);
+      this.renderOnboarding();
+    }
+  };
+
+  private async loadTasks(): Promise<void> {
+    if (this.tasks !== null) return; // already loaded
+    try {
+      const res = await fetch(this.tasksEndpoint);
+      const data = (await res.json()) as TasksResponse;
+      // Re-onboard when graph hash changes
+      const storedHash = this.progressProvider.getGraphHash();
+      if (storedHash !== data.graphHash) {
+        this.progressProvider.reset();
+        this.progressProvider.setGraphHash(data.graphHash);
+      }
+      this.tasks = data.tasks;
+    } catch {
+      this.tasks = [];
+    }
+    this.renderOnboarding();
+  }
+
+  private renderOnboarding(): void {
+    const container = this.shadow.querySelector("#onboarding");
+    if (!container) return;
+    // Clear previous content safely
+    container.innerHTML = "";
+
+    if (!this.tasks || this.tasks.length === 0) return;
+
+    const heading = document.createElement("strong");
+    heading.textContent = "Get started";
+    container.appendChild(heading);
+
+    const ul = document.createElement("ul");
+    ul.style.listStyle = "none";
+    ul.style.padding = "0";
+    ul.style.margin = "4px 0 0 0";
+
+    for (const task of this.tasks) {
+      const li = document.createElement("li");
+      li.dataset.taskId = task.id;
+      li.style.display = "flex";
+      li.style.alignItems = "center";
+      li.style.gap = "6px";
+      li.style.marginBottom = "4px";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.disabled = true;
+      if (this.progressProvider.isComplete(task.id)) {
+        checkbox.checked = true;
+      }
+
+      const btn = document.createElement("button");
+      btn.className = "task-start";
+      btn.dataset.taskId = task.id;
+      btn.textContent = localizedLabel(task.title);
+
+      li.appendChild(checkbox);
+      li.appendChild(btn);
+      ul.appendChild(li);
+    }
+
+    container.appendChild(ul);
   }
 
   private handleClick = (e: Event) => {
@@ -58,9 +168,27 @@ export class AssistWidget extends HTMLElement {
       this.render();
       if (this.open) {
         this.focusFirst();
+        // Lazy-load tasks on first open
+        void this.loadTasks();
       }
     } else if (target.id === "send") {
       this.sendQuery();
+    } else if (
+      target.classList.contains("task-start") &&
+      target.dataset.taskId !== undefined
+    ) {
+      // Tour start — find the task and dispatch event
+      const taskId = target.dataset.taskId;
+      const task = this.tasks?.find((t) => t.id === taskId);
+      if (task) {
+        this.dispatchEvent(
+          new CustomEvent("wayfinder:tour-start", {
+            detail: { taskId: task.id, sequence: task.sequence },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
     } else if (target.dataset.candidate !== undefined) {
       // Disambiguate candidate clicked — populate input and auto-send
       const input = this.shadow.querySelector("#input") as HTMLInputElement;
@@ -306,15 +434,6 @@ export class AssistWidget extends HTMLElement {
       this.classList.remove("reduce-motion");
     }
 
-    const proactive = this.open
-      ? `
-      <div style="padding:8px;border-bottom:1px solid var(--assist-border);font-size:12px;background:var(--assist-bg);">
-        <strong>Onboarding (Phase 2):</strong><br/>
-        <label><input type="checkbox" checked disabled> Log your first donor offer</label><br/>
-        <button data-proactive-tour style="font-size:10px;">Start tour</button>
-      </div>`
-      : "";
-
     const panelDisplay = this.open ? "flex" : "none";
 
     this.shadow.innerHTML = `
@@ -369,6 +488,12 @@ export class AssistWidget extends HTMLElement {
           color: var(--assist-bg);
           font-weight: 600;
         }
+        #onboarding {
+          padding: 8px;
+          border-bottom: 1px solid var(--assist-border);
+          font-size: 12px;
+          background: var(--assist-bg);
+        }
         #body {
           padding: 12px;
           flex: 1;
@@ -387,6 +512,7 @@ export class AssistWidget extends HTMLElement {
         [data-candidate] { margin: 2px; }
         [data-drive-confirm] { background: var(--assist-primary); color: var(--assist-bg); border: none; margin: 2px; }
         [data-drive-cancel] { margin: 2px; }
+        .task-start { font-size: 12px; padding: 2px 6px; }
       </style>
       <button id="launcher" aria-label="Open Wayfinder Assist">💬</button>
       <div
@@ -395,7 +521,7 @@ export class AssistWidget extends HTMLElement {
         style="display:${panelDisplay};"
       >
         <div class="header">Wayfinder Assist</div>
-        ${proactive}
+        <div id="onboarding"></div>
         <div id="body" aria-live="polite"></div>
         <div class="footer">
           <input id="input" placeholder="How do I log a donor offer?" />
@@ -404,20 +530,9 @@ export class AssistWidget extends HTMLElement {
       </div>
     `;
     this.renderMessages();
-
-    // Wire up the proactive tour button using DOM (avoids inline onclick)
-    const tourBtn = this.shadow.querySelector(
-      "[data-proactive-tour]",
-    ) as HTMLButtonElement | null;
-    if (tourBtn) {
-      tourBtn.addEventListener("click", () => {
-        const input = this.shadow.querySelector("#input") as HTMLInputElement;
-        const send = this.shadow.querySelector("#send") as HTMLButtonElement;
-        if (input && send) {
-          input.value = "how do I log a donor offer?";
-          send.click();
-        }
-      });
+    // Re-populate onboarding from cached tasks (if already loaded)
+    if (this.tasks !== null) {
+      this.renderOnboarding();
     }
   }
 }

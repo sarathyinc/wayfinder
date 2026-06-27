@@ -28,3 +28,9 @@ export type {
 } from "./reconcile/types.js";
 
 // Providers are consumed via @wayfinder/providers at runtime (CLI/adapter host decides)
+
+// Server-side progress hook — implement to persist completion server-side
+export interface ServerProgressHook {
+  getCompletedTasks(session: unknown): Promise<string[]>;
+  markTaskComplete(session: unknown, taskId: string): Promise<void>;
+}
