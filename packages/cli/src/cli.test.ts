@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import type { CompileProvider } from "@wayfinder/core";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,7 +41,7 @@ describe("compile: structure-hash flow-pass caching", () => {
       const { compileCommand } = await import("./commands/compile.js");
 
       // First compile: should call suggestTasks
-      const provider1 = {
+      const provider1: CompileProvider = {
         name: "mock",
         compilePerRoute: vi.fn().mockResolvedValue({
           description: "Dashboard",
@@ -60,11 +61,11 @@ describe("compile: structure-hash flow-pass caching", () => {
         matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
       };
 
-      await compileCommand(dir, { _provider: provider1 as any });
+      await compileCommand(dir, { _provider: provider1 });
       expect(provider1.suggestTasks).toHaveBeenCalledTimes(1);
 
       // Second compile with same structure: should NOT call suggestTasks again
-      const provider2 = {
+      const provider2: CompileProvider = {
         name: "mock",
         compilePerRoute: vi.fn().mockResolvedValue({
           description: "Dashboard",
@@ -76,7 +77,7 @@ describe("compile: structure-hash flow-pass caching", () => {
         matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
       };
 
-      await compileCommand(dir, { _provider: provider2 as any });
+      await compileCommand(dir, { _provider: provider2 });
       expect(provider2.suggestTasks).not.toHaveBeenCalled();
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -90,7 +91,7 @@ describe("compile: structure-hash flow-pass caching", () => {
 
       const { compileCommand } = await import("./commands/compile.js");
 
-      const provider1 = {
+      const provider1: CompileProvider = {
         name: "mock",
         compilePerRoute: vi.fn().mockResolvedValue({
           description: "Dashboard",
@@ -110,13 +111,13 @@ describe("compile: structure-hash flow-pass caching", () => {
         matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
       };
 
-      await compileCommand(dir, { _provider: provider1 as any });
+      await compileCommand(dir, { _provider: provider1 });
       expect(provider1.suggestTasks).toHaveBeenCalledTimes(1);
 
       // Add a new route — changes structure
       writePageFile(dir, "users/page.tsx", USERS_PAGE);
 
-      const provider2 = {
+      const provider2: CompileProvider = {
         name: "mock",
         compilePerRoute: vi.fn().mockResolvedValue({
           description: "Users",
@@ -136,7 +137,7 @@ describe("compile: structure-hash flow-pass caching", () => {
         matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
       };
 
-      await compileCommand(dir, { _provider: provider2 as any });
+      await compileCommand(dir, { _provider: provider2 });
       expect(provider2.suggestTasks).toHaveBeenCalledTimes(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -157,7 +158,7 @@ describe("gate: structure-hash check", () => {
       const { compileCommand } = await import("./commands/compile.js");
       const { gateCommand } = await import("./commands/gate.js");
 
-      const provider = {
+      const provider: CompileProvider = {
         name: "mock",
         compilePerRoute: vi.fn().mockResolvedValue({
           description: "Dashboard",
@@ -170,7 +171,7 @@ describe("gate: structure-hash check", () => {
       };
 
       // Compile to create capability_graph.json
-      await compileCommand(dir, { _provider: provider as any });
+      await compileCommand(dir, { _provider: provider });
 
       // Corrupt the cache by removing the tasks.structureHash
       const cachePath = join(dir, ".assist", "compile_cache.json");
@@ -198,7 +199,7 @@ describe("gate: structure-hash check", () => {
       const { compileCommand } = await import("./commands/compile.js");
       const { gateCommand } = await import("./commands/gate.js");
 
-      const provider = {
+      const provider: CompileProvider = {
         name: "mock",
         compilePerRoute: vi.fn().mockResolvedValue({
           description: "Dashboard",
@@ -219,7 +220,7 @@ describe("gate: structure-hash check", () => {
       };
 
       // Compile first to generate the cache
-      await compileCommand(dir, { _provider: provider as any });
+      await compileCommand(dir, { _provider: provider });
 
       // Gate should pass
       await expect(gateCommand(dir)).resolves.not.toThrow();

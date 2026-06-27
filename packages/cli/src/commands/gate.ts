@@ -40,10 +40,36 @@ export async function gateCommand(dir = ".") {
     throw new Error(`Drift detected: ${missing} routes not compiled.`);
   }
 
-  // Check that the structure hash for the flow pass is present in the cache
-  const graph = loaded.graph;
-  const structureHash = computeGraphStructureHash(graph);
-  if (cache.tasks?.structureHash !== structureHash) {
+  // Derive structure hash from the current source manifest (not the committed graph)
+  // so we detect when source files changed since last compile.
+  const manifestActions = manifest.routes.map((r) => ({
+    id: `${r.routeKey.replace(/\//g, ".")}.view`.replace(/^\./, ""),
+    route: r.routeKey,
+    personas: r.personas,
+  }));
+
+  const currentStructureHash = computeGraphStructureHash({
+    version: 2,
+    defaultLocale: "en",
+    pages: [],
+    actions: manifestActions.map((a) => ({
+      id: a.id,
+      route: a.route,
+      label: a.route,
+      personas: a.personas,
+      effect: "navigate" as const,
+      params: [],
+      synonyms: [],
+      steps: [],
+      spotlight: [],
+      execution: null,
+    })),
+    fields: [],
+    transitions: manifest.transitions,
+    tasks: [],
+  });
+
+  if (cache.tasks?.structureHash !== currentStructureHash) {
     throw new Error(
       `Drift detected: structure hash mismatch. Run 'assist compile' to regenerate tasks.`,
     );
