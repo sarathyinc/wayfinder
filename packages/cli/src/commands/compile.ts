@@ -134,37 +134,6 @@ export async function compileCommand(
     });
   }
 
-  // Stash suggested tasks before annotation merge; the cache invalidation check
-  // uses a temporary hash so we can re-run suggestTasks when routes change.
-  const preAnnotationHash = computeGraphStructureHash({
-    version: 2,
-    defaultLocale: "en",
-    pages,
-    actions,
-    fields,
-    transitions,
-    tasks: [],
-  });
-
-  // Only re-run flow pass when structure has changed
-  if (cache.tasks?.structureHash !== preAnnotationHash) {
-    const suggested = await provider.suggestTasks({
-      actions: actions.map((a) => ({
-        id: a.id,
-        route: a.route,
-        personas: a.personas,
-      })),
-      transitions,
-      personas: ["user", "intake_admin", "admin"],
-    });
-    cache.tasks = {
-      structureHash: preAnnotationHash,
-      tasks: suggested.map((s) => ({ ...s, source: "suggested" as const })),
-    };
-  }
-
-  const finalTasks = (cache.tasks?.tasks ?? []) as CapabilityGraph["tasks"];
-
   // ---------------------------------------------------------------------------
   // Annotation merge (G7): load annotations file and apply overrides last
   // ---------------------------------------------------------------------------
@@ -194,6 +163,37 @@ export async function compileCommand(
     }
   }
 
+  // Compute the final structure hash AFTER annotation merge so that gate.ts
+  // (which also computes the hash post-annotation) stays in sync.
+  const structureHash = computeGraphStructureHash({
+    version: 2,
+    defaultLocale: "en",
+    pages,
+    actions,
+    fields,
+    transitions,
+    tasks: [],
+  });
+
+  // Only re-run flow pass when the post-annotation structure has changed.
+  if (cache.tasks?.structureHash !== structureHash) {
+    const suggested = await provider.suggestTasks({
+      actions: actions.map((a) => ({
+        id: a.id,
+        route: a.route,
+        personas: a.personas,
+      })),
+      transitions,
+      personas: ["user", "intake_admin", "admin"],
+    });
+    cache.tasks = {
+      structureHash,
+      tasks: suggested.map((s) => ({ ...s, source: "suggested" as const })),
+    };
+  }
+
+  const finalTasks = (cache.tasks?.tasks ?? []) as CapabilityGraph["tasks"];
+
   // Apply task annotation overrides (annotated wins; add if missing)
   const mergedTasks: CapabilityGraph["tasks"] = finalTasks.filter(
     (t) => !(t.id in annotatedTasks),
@@ -208,22 +208,6 @@ export async function compileCommand(
       source: "annotated" as const,
       confidence: ann.confidence,
     });
-  }
-
-  // Compute the final structure hash AFTER annotation merge so that gate.ts
-  // (which also computes the hash post-annotation) stays in sync.
-  const structureHash = computeGraphStructureHash({
-    version: 2,
-    defaultLocale: "en",
-    pages,
-    actions,
-    fields,
-    transitions,
-    tasks: [],
-  });
-  // Update the cached hash to the post-annotation value.
-  if (cache.tasks) {
-    cache.tasks.structureHash = structureHash;
   }
 
   const graph: CapabilityGraph = {
