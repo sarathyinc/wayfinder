@@ -1,7 +1,10 @@
 // Phase 3: Basic command bus for agentic execution (DRIVE)
 // In real Next app, modals would subscribe here.
 
-type BusListener = (actionId: string, prefill?: any) => void;
+type BusListener = (
+  actionId: string,
+  prefill?: Record<string, unknown>,
+) => void;
 const listeners = new Set<BusListener>();
 
 export function registerActionListener(fn: BusListener) {
@@ -13,10 +16,10 @@ export function openAction(
   actionId: string,
   prefill?: Record<string, unknown>,
 ): void {
-  if (
+  const agenticEnabled =
     typeof process !== "undefined" &&
-    process.env.ASSIST_AGENTIC_ENABLED !== "1"
-  ) {
+    process.env.ASSIST_AGENTIC_ENABLED === "1";
+  if (!agenticEnabled) {
     return; // kill-switch is off
   }
   // This would be called by handler when DRIVE
