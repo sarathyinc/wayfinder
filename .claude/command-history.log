@@ -1,0 +1,214 @@
+[2026-06-26 21:35:16] mkdir -p /Users/aniruth/hobby/saas-ai-assist/docs/superpowers/specs && echo created
+[2026-06-26 21:38:02] git checkout -b docs/ai-assist-framework-spec && git add docs/superpowers/specs/2026-06-26-ai-assist-framework-design.md && git commit -q -m "$(cat <<'EOF'
+Add AI Assist framework design spec
+
+Synthesizes the two prior stack-specific specs (Rio annotation-based +
+Bailey zero-annotation compiler) into one open-source, stack-agnostic
+framework design: auto-discovery-first capability graph, source-hash
+compile cache, proactive onboarding + reactive assistant, agnostic JSON
+core + flagship Next.js adapter.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+EOF
+)" && git log --oneline -2
+[2026-06-26 21:39:43] mkdir -p /Users/aniruth/hobby/saas-ai-assist/docs/superpowers/plans && echo created
+[2026-06-26 21:41:53] git add docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md && git commit -q -m "$(cat <<'EOF'
+Add Phase 1a implementation plan: @wayfinder/core foundation
+
+Bite-sized TDD plan for the monorepo scaffold and the capability-graph
+schema package (Zod schema, types, referential-integrity validator, JSON
+loader, committed JSON Schema, example fixture).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+EOF
+)" && git log --oneline -3
+[2026-06-26 22:49:44] ROOT="$(git rev-parse --show-toplevel)"; echo "ROOT=$ROOT"; echo "--- ledger ---"; cat "$ROOT/.superpowers/sdd/progress.md" 2>/dev/null || echo "(no ledger yet)"; echo "--- branch ---"; git branch --show-current; echo "--- scripts ---"; ls /Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/ 2>/dev/null
+[2026-06-26 22:50:00] ROOT="$(git rev-parse --show-toplevel)"
+mkdir -p "$ROOT/.superpowers/sdd"
+BASE="$(git rev-parse --short HEAD)"
+cat > "$ROOT/.superpowers/sdd/progress.md" <<EOF
+# SDD Progress — Wayfinder Core Foundation (Phase 1a)
+
+Plan: docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md
+Branch: docs/ai-assist-framework-spec
+Base commit (before any task): $BASE
+
+## Tasks
+- Task 1: scaffold monorepo + core skeleton — pending
+- Task 2: capability-graph zod schema + types — pending
+- Task 3: validateGraph integrity checks — pending
+- Task 4: loadGraph loader — pending
+- Task 5: JSON Schema emission + artifact — pending
+- Task 6: public API + example + README — pending
+EOF
+echo "BASE=$BASE"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/task-brief" "$ROOT/docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md" 1
+[2026-06-26 22:50:25] ls /Users/aniruth/hobby/saas-ai-assist/ && which pnpm && pnpm --version
+[2026-06-26 22:50:53] mkdir -p /Users/aniruth/hobby/saas-ai-assist/packages/core/src
+[2026-06-26 22:51:17] pnpm install 2>&1
+[2026-06-26 22:51:24] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:51:28] pnpm --filter @wayfinder/core build 2>&1
+[2026-06-26 22:51:31] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/dist/
+[2026-06-26 22:51:35] git add package.json pnpm-workspace.yaml turbo.json tsconfig.base.json .gitignore LICENSE packages/core/ 2>&1
+[2026-06-26 22:51:37] git status && git diff --cached --stat 2>&1
+[2026-06-26 22:51:40] git add pnpm-lock.yaml 2>&1
+[2026-06-26 22:51:42] git commit -m "$(cat <<'EOF'
+chore: scaffold monorepo and @wayfinder/core skeleton
+EOF
+)"
+[2026-06-26 22:51:45] ls /Users/aniruth/hobby/saas-ai-assist/.superpowers/sdd/
+[2026-06-26 22:52:22] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/review-package" c19b80f 0b04da9
+[2026-06-26 22:53:29] ROOT="$(git rev-parse --show-toplevel)"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+sed -i '' 's/- Task 1: scaffold monorepo + core skeleton — pending/- Task 1: complete (commits c19b80f..0b04da9, review clean)/' "$ROOT/.superpowers/sdd/progress.md"
+"$SCR/task-brief" "$ROOT/docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md" 2
+[2026-06-26 22:53:54] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/src/ 2>/dev/null || echo "Directory not found"
+[2026-06-26 22:53:55] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/ 2>/dev/null || echo "Directory not found"
+[2026-06-26 22:54:00] cat tsconfig.base.json 2>/dev/null || echo "Not found"
+[2026-06-26 22:54:02] cat /Users/aniruth/hobby/saas-ai-assist/packages/core/node_modules/zod/package.json | grep '"version"'
+[2026-06-26 22:54:05] mkdir -p /Users/aniruth/hobby/saas-ai-assist/packages/core/src/schema
+[2026-06-26 22:54:19] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:54:42] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:54:45] git add packages/core/src/schema && git commit -m "feat(core): capability-graph zod schema and inferred types"
+[2026-06-26 22:54:48] ls /Users/aniruth/hobby/saas-ai-assist/.superpowers/sdd/
+[2026-06-26 22:55:11] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/review-package" 0b04da9 e1a78dd
+[2026-06-26 22:56:19] ROOT="$(git rev-parse --show-toplevel)"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+sed -i '' 's/- Task 2: capability-graph zod schema + types — pending/- Task 2: complete (commits 0b04da9..e1a78dd, review clean)/' "$ROOT/.superpowers/sdd/progress.md"
+cat >> "$ROOT/.superpowers/sdd/progress.md" <<'EOF'
+
+## Minor findings (for final review triage)
+- Task 2: LocalizedTextSchema accepts empty `{}` locale map (not prohibited by spec); no exported non-null ExecutionDescriptor inner type; coverage limited to brief's 4 tests. All non-blocking.
+EOF
+"$SCR/task-brief" "$ROOT/docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md" 3
+[2026-06-26 22:56:43] find /Users/aniruth/hobby/saas-ai-assist/packages/core/src -type f | sort
+[2026-06-26 22:56:44] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/
+[2026-06-26 22:57:09] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:57:26] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:57:30] git -C /Users/aniruth/hobby/saas-ai-assist add packages/core/src/graph/validate.ts packages/core/src/graph/validate.test.ts && git -C /Users/aniruth/hobby/saas-ai-assist commit -m "feat(core): graph referential-integrity validator"
+[2026-06-26 22:57:54] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/review-package" e1a78dd 9feafd4
+[2026-06-26 22:59:02] ROOT="$(git rev-parse --show-toplevel)"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+sed -i '' 's/- Task 3: validateGraph integrity checks — pending/- Task 3: complete (commits e1a78dd..9feafd4, review clean)/' "$ROOT/.superpowers/sdd/progress.md"
+"$SCR/task-brief" "$ROOT/docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md" 4
+[2026-06-26 22:59:41] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:59:49] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 22:59:56] git add packages/core/src/graph/load.ts packages/core/src/graph/load.test.ts && git commit -m "feat(core): loadGraph JSON loader"
+[2026-06-26 23:00:19] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/review-package" 9feafd4 9fc4d0b
+[2026-06-26 23:00:57] ROOT="$(git rev-parse --show-toplevel)"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+sed -i '' 's/- Task 4: loadGraph loader — pending/- Task 4: complete (commits 9feafd4..9fc4d0b, review clean)/' "$ROOT/.superpowers/sdd/progress.md"
+"$SCR/task-brief" "$ROOT/docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md" 5
+[2026-06-26 23:01:26] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/ && cat /Users/aniruth/hobby/saas-ai-assist/packages/core/package.json
+[2026-06-26 23:01:27] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/src/schema/ 2>/dev/null && cat /Users/aniruth/hobby/saas-ai-assist/packages/core/src/schema/index.ts 2>/dev/null || echo "Directory or file not found"
+[2026-06-26 23:01:30] cat /Users/aniruth/hobby/saas-ai-assist/packages/core/src/schema/graph.ts
+[2026-06-26 23:01:31] node -e "const z = require('/Users/aniruth/hobby/saas-ai-assist/packages/core/node_modules/zod'); console.log(typeof z.toJSONSchema); console.log(Object.keys(z).filter(k => k.toLowerCase().includes('json')))"
+[2026-06-26 23:01:42] pnpm --filter @wayfinder/core test 2>&1 | tail -30
+[2026-06-26 23:01:46] mkdir -p /Users/aniruth/hobby/saas-ai-assist/packages/core/scripts && mkdir -p /Users/aniruth/hobby/saas-ai-assist/packages/core/schema
+[2026-06-26 23:02:04] pnpm install 2>&1 | tail -10
+[2026-06-26 23:02:08] pnpm --filter @wayfinder/core schema:emit 2>&1
+[2026-06-26 23:02:11] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 23:02:15] cp /Users/aniruth/hobby/saas-ai-assist/packages/core/schema/capability-graph.schema.json /private/tmp/before.json && pnpm --filter @wayfinder/core schema:emit 2>&1 && diff /private/tmp/before.json /Users/aniruth/hobby/saas-ai-assist/packages/core/schema/capability-graph.schema.json && echo "DETERMINISTIC: byte-identical"
+[2026-06-26 23:02:18] git add packages/core/scripts packages/core/schema packages/core/package.json packages/core/src/schema/json-schema.test.ts && git status
+[2026-06-26 23:02:21] git add pnpm-lock.yaml && git commit -m "feat(core): emit and commit capability-graph JSON Schema"
+[2026-06-26 23:02:24] cat /Users/aniruth/hobby/saas-ai-assist/packages/core/schema/capability-graph.schema.json | head -20
+[2026-06-26 23:02:50] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/review-package" 9fc4d0b ece9efa
+[2026-06-26 23:04:08] ROOT="$(git rev-parse --show-toplevel)"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+sed -i '' 's/- Task 5: JSON Schema emission + artifact — pending/- Task 5: complete (commits 9fc4d0b..ece9efa, review clean)/' "$ROOT/.superpowers/sdd/progress.md"
+"$SCR/task-brief" "$ROOT/docs/superpowers/plans/2026-06-26-wayfinder-core-foundation.md" 6
+[2026-06-26 23:04:31] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/src/ && echo "---" && ls /Users/aniruth/hobby/saas-ai-assist/packages/core/
+[2026-06-26 23:04:33] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/src/schema/ && ls /Users/aniruth/hobby/saas-ai-assist/packages/core/src/graph/
+[2026-06-26 23:04:36] cat /Users/aniruth/hobby/saas-ai-assist/packages/core/src/schema/index.ts
+[2026-06-26 23:04:37] cat /Users/aniruth/hobby/saas-ai-assist/packages/core/src/graph/validate.ts && echo "---" && cat /Users/aniruth/hobby/saas-ai-assist/packages/core/src/graph/load.ts
+[2026-06-26 23:04:47] pnpm --filter @wayfinder/core test 2>&1 | tail -40
+[2026-06-26 23:04:54] mkdir -p /Users/aniruth/hobby/saas-ai-assist/packages/core/examples
+[2026-06-26 23:05:19] pnpm --filter @wayfinder/core test 2>&1 | tail -30
+[2026-06-26 23:05:23] pnpm --filter @wayfinder/core typecheck 2>&1
+[2026-06-26 23:05:24] pnpm --filter @wayfinder/core build 2>&1
+[2026-06-26 23:05:35] git -C /Users/aniruth/hobby/saas-ai-assist diff HEAD -- packages/core/tsconfig.json packages/core/package.json 2>&1
+[2026-06-26 23:05:36] git -C /Users/aniruth/hobby/saas-ai-assist stash && pnpm --filter @wayfinder/core typecheck 2>&1 | head -20; git -C /Users/aniruth/hobby/saas-ai-assist stash pop
+[2026-06-26 23:05:42] git -C /Users/aniruth/hobby/saas-ai-assist add packages/core/src/index.ts packages/core/src/index.test.ts packages/core/examples packages/core/README.md
+[2026-06-26 23:05:45] git -C /Users/aniruth/hobby/saas-ai-assist commit -m "$(cat <<'EOF'
+feat(core): public API, example graph, and README
+EOF
+)"
+[2026-06-26 23:07:09] pnpm --filter @wayfinder/core typecheck 2>&1 | head -60
+[2026-06-26 23:07:20] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/
+[2026-06-26 23:07:30] pnpm install 2>&1 | tail -10
+[2026-06-26 23:07:33] pnpm --filter @wayfinder/core typecheck 2>&1
+[2026-06-26 23:07:41] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 23:07:42] pnpm --filter @wayfinder/core build 2>&1
+[2026-06-26 23:07:47] ls /Users/aniruth/hobby/saas-ai-assist/.superpowers/sdd/ 2>&1
+[2026-06-26 23:08:14] git diff --stat 2>&1
+[2026-06-26 23:08:17] git add packages/core/package.json packages/core/tsconfig.json pnpm-lock.yaml .superpowers/sdd/task-6-report.md && git commit -m "$(cat <<'EOF'
+fix(core): add @types/node so the package typechecks cleanly
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+EOF
+)"
+[2026-06-26 23:08:20] git add packages/core/package.json packages/core/tsconfig.json pnpm-lock.yaml && git commit -m "$(cat <<'EOF'
+fix(core): add @types/node so the package typechecks cleanly
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+EOF
+)"
+[2026-06-26 23:08:31] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+echo "HEAD=$(git rev-parse --short HEAD)"
+"$SCR/review-package" ece9efa 327b97d
+[2026-06-26 23:10:05] ROOT="$(git rev-parse --show-toplevel)"
+SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+sed -i '' 's/- Task 6: public API + example + README — pending/- Task 6: complete (commits ece9efa..327b97d incl. @types\/node typecheck fix, review clean)/' "$ROOT/.superpowers/sdd/progress.md"
+cat >> "$ROOT/.superpowers/sdd/progress.md" <<'EOF'
+- Task 3: empty-string Zod path for root issues; duplicate-error path uses value not index (cosmetic).
+- Task 5: json-schema test throws ENOENT (not clean assert) if artifact missing; description embeds fix command (cosmetic).
+- Task 6: CORE_VERSION not directly asserted in index.test; README omits ValidateResult shape table (cosmetic).
+- Cross-task FIXED: package did not typecheck (missing @types/node) — fixed in 327b97d.
+
+ALL TASKS COMPLETE. Final whole-branch review pending.
+EOF
+echo "--- final review package ---"
+"$SCR/review-package" c19b80f 327b97d
+[2026-06-26 23:10:56] grep -n "version\|execution\|tier\|confidence\|source\|routeKey\|defaultLocale\|locale\|capability graph\|## 5\|### 5\|§5\|effect" /Users/aniruth/hobby/saas-ai-assist/docs/superpowers/specs/2026-06-26-ai-assist-framework-design.md | head -80
+[2026-06-26 23:12:43] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/schema/ 2>/dev/null && echo "---" && ls /Users/aniruth/hobby/saas-ai-assist/packages/core/scripts/ 2>/dev/null
+[2026-06-26 23:12:44] ls /Users/aniruth/hobby/saas-ai-assist/packages/core/
+[2026-06-26 23:13:16] pnpm --filter @wayfinder/core schema:emit 2>&1
+[2026-06-26 23:13:20] git diff packages/core/schema/capability-graph.schema.json
+[2026-06-26 23:13:22] pnpm --filter @wayfinder/core test 2>&1
+[2026-06-26 23:13:26] pnpm --filter @wayfinder/core typecheck 2>&1
+[2026-06-26 23:13:26] pnpm --filter @wayfinder/core build 2>&1
+[2026-06-26 23:13:30] git diff --stat HEAD 2>&1
+[2026-06-26 23:13:34] git add packages/core/package.json packages/core/src/graph/validate.test.ts packages/core/src/graph/validate.ts packages/core/src/schema/graph.test.ts packages/core/src/schema/graph.ts && git commit -m "$(cat <<'EOF'
+fix(core): reject empty locale maps, omit empty schema-error path, export JSON Schema asset
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+EOF
+)"
+[2026-06-26 23:13:37] git rev-parse --short HEAD
+[2026-06-26 23:13:39] mkdir -p /Users/aniruth/hobby/saas-ai-assist/.superpowers/sdd
+[2026-06-26 23:14:05] ls /Users/aniruth/hobby/saas-ai-assist/.superpowers/sdd/ 2>/dev/null || echo "dir empty or missing"
+[2026-06-26 23:14:36] SCR=/Users/aniruth/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts
+"$SCR/review-package" 327b97d c30b6fd
+[2026-06-26 23:19:37] git config user.email "aniruth@sarathyinc.com" && git config user.email
+[2026-06-26 23:20:25] cd /Users/aniruth/hobby/saas-ai-assist && git status && git branch --show-current && git log --oneline -20
+[2026-06-26 23:20:26] cd /Users/aniruth/hobby/saas-ai-assist && git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null; git log --oneline $(git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null)..HEAD 2>/dev/null | wc -l
+[2026-06-26 23:20:36] cd /Users/aniruth/hobby/saas-ai-assist && git branch -a && git log --oneline main 2>/dev/null | head -5; git log --oneline master 2>/dev/null | head -5
+[2026-06-26 23:20:36] cd /Users/aniruth/hobby/saas-ai-assist && git log --oneline ec15e39..HEAD
+[2026-06-26 23:20:44] cd /Users/aniruth/hobby/saas-ai-assist && git reset --soft ec15e39 && git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -m "$(cat <<'EOF'
+feat: add AI Assist framework spec and @wayfinder/core foundation
+
+Add the framework design spec, Phase 1a implementation plan, and the
+@wayfinder/core package with capability-graph schema, validation, JSON
+loader, emitted JSON Schema, public API, example graph, and README.
+EOF
+)"
+[2026-06-26 23:20:49] cd /Users/aniruth/hobby/saas-ai-assist && git log --oneline -5 && git status
+[2026-06-26 23:23:02] cd /Users/aniruth/hobby/saas-ai-assist && git status && git branch -v && git log --oneline main..docs/ai-assist-framework-spec
+[2026-06-26 23:23:05] cd /Users/aniruth/hobby/saas-ai-assist && git checkout main && git merge docs/ai-assist-framework-spec
+[2026-06-26 23:23:09] cd /Users/aniruth/hobby/saas-ai-assist && git log --oneline -3 && git status
