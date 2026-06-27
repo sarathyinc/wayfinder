@@ -1,7 +1,7 @@
 export class AssistWidget extends HTMLElement {
   private shadow: ShadowRoot;
   private open = false;
-  private messages: Array<{role: string, content: string}> = [];
+  private messages: Array<{ role: string; content: string }> = [];
   private endpoint = "/api/assist/chat";
 
   constructor() {
@@ -19,7 +19,7 @@ export class AssistWidget extends HTMLElement {
   }
 
   private handleClick = (e: Event) => {
-    const target = (e.target as HTMLElement);
+    const target = e.target as HTMLElement;
     if (target.id === "launcher") {
       this.open = !this.open;
       this.render();
@@ -45,19 +45,28 @@ export class AssistWidget extends HTMLElement {
       const res = await fetch(this.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, persona: "intake_admin", context: { route: location.pathname } })
+        body: JSON.stringify({
+          query: q,
+          context: { route: location.pathname },
+        }),
       });
       const data = await res.json();
       let reply = "";
-      if (data.kind === "guide") reply = `Guide: ${data.steps?.join(" → ") || data.actionId}`;
+      if (data.kind === "guide")
+        reply = `Guide: ${data.steps?.join(" → ") || data.actionId}`;
       else if (data.kind === "navigate") reply = `Navigate to ${data.route}`;
-      else if (data.kind === "field") reply = `Field: ${data.label} on ${data.page}`;
-      else if (data.kind === "disambiguate") reply = "Multiple matches. Please clarify.";
+      else if (data.kind === "field")
+        reply = `Field: ${data.label} on ${data.page}`;
+      else if (data.kind === "disambiguate")
+        reply = "Multiple matches. Please clarify.";
       else if (data.kind === "refuse") reply = `Refused: ${data.reason}`;
       else reply = JSON.stringify(data);
       this.messages.push({ role: "assistant", content: reply });
     } catch (e) {
-      this.messages.push({ role: "assistant", content: "Error contacting assistant." });
+      this.messages.push({
+        role: "assistant",
+        content: "Error contacting assistant.",
+      });
     }
     this.renderMessages();
   }
@@ -65,16 +74,20 @@ export class AssistWidget extends HTMLElement {
   private renderMessages() {
     const body = this.shadow.querySelector("#body");
     if (!body) return;
-    body.innerHTML = this.messages.map(m => `<div><b>${m.role}:</b> ${m.content}</div>`).join("");
+    body.innerHTML = this.messages
+      .map((m) => `<div><b>${m.role}:</b> ${m.content}</div>`)
+      .join("");
   }
 
   private render() {
-    const proactive = this.open ? `
+    const proactive = this.open
+      ? `
       <div style="padding:8px;border-bottom:1px solid #eee;font-size:12px;background:#f9f9f9;">
         <strong>Onboarding (Phase 2):</strong><br/>
         <label><input type="checkbox" checked disabled> Log your first donor offer</label><br/>
         <button onclick="this.closest('assist-widget').shadowRoot.querySelector('#input').value='how do I log a donor offer?'; this.closest('assist-widget').shadowRoot.querySelector('#send').click();" style="font-size:10px;">Start tour</button>
-      </div>` : '';
+      </div>`
+      : "";
     this.shadow.innerHTML = `
       <style>
         :host { font-family: system-ui, sans-serif; }
