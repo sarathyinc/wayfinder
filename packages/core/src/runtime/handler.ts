@@ -80,7 +80,9 @@ export async function handleAssistChat(
       const action = filtered.actions.find((a) => a.id === llm.id);
       if (action) {
         // Drive gate: only when flag on + execution hook exists + not a write + high confidence
-        const agenticEnabled = process.env.ASSIST_AGENTIC_ENABLED === "1";
+        const agenticEnabled =
+          typeof process !== "undefined" &&
+          process.env.ASSIST_AGENTIC_ENABLED === "1";
         if (
           agenticEnabled &&
           action.execution !== null &&

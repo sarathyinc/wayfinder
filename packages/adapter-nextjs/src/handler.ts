@@ -114,7 +114,7 @@ function extractSession(req: Request): unknown {
   const cookieHeader = req.headers.get("cookie");
   if (cookieHeader) {
     const sessionValue = parseCookieValue(cookieHeader, "session");
-    if (sessionValue !== null) {
+    if (sessionValue !== null && sessionValue !== "") {
       return { sessionCookie: sessionValue };
     }
   }

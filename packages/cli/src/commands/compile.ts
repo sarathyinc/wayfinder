@@ -36,8 +36,11 @@ async function loadAnnotationsFile(root: string): Promise<void> {
 
     try {
       await import(pathToFileURL(annotationsPath).href);
-    } catch {
-      // Annotation file is optional — silently skip on load errors.
+    } catch (err) {
+      console.warn(
+        `[wayfinder] Warning: failed to load annotations file "${annotationsPath}": ${err}`,
+      );
+      return null;
     }
     return; // only load the first match
   }
