@@ -22,6 +22,7 @@ Everything is powered by a single **capability graph** that is automatically der
 ## Why Wayfinder?
 
 Most SaaS products still rely on:
+
 - Static documentation
 - Generic product tours
 - Expensive customer success teams
@@ -52,6 +53,7 @@ pnpm dev
 Open http://localhost:3000 and try the floating chat widget.
 
 Ask questions like:
+
 - “How do I log a donor offer?”
 - “Where do I enter terminal creatinine?”
 
@@ -97,17 +99,17 @@ For a deeper explanation, see:
 
 ## Documentation
 
-| Topic                          | Link                              |
-|--------------------------------|-----------------------------------|
-| Getting Started                | [docs/getting-started.md](./docs/getting-started.md) |
-| Adding to Your Application     | [docs/integration.md](./docs/integration.md) |
-| Core Concepts                  | [docs/concepts.md](./docs/concepts.md) |
-| Architecture & Pipeline        | [docs/architecture.md](./docs/architecture.md) |
-| CLI Reference                  | [docs/cli.md](./docs/cli.md) |
-| FAQ                            | [docs/faq.md](./docs/faq.md) |
-| Security & Privacy             | [docs/security.md](./docs/security.md) |
-| Roadmap                        | [ROADMAP.md](./ROADMAP.md) |
-| Development & Contributing     | [docs/development.md](./docs/development.md) |
+| Topic                      | Link                                                 |
+| -------------------------- | ---------------------------------------------------- |
+| Getting Started            | [docs/getting-started.md](./docs/getting-started.md) |
+| Adding to Your Application | [docs/integration.md](./docs/integration.md)         |
+| Core Concepts              | [docs/concepts.md](./docs/concepts.md)               |
+| Architecture & Pipeline    | [docs/architecture.md](./docs/architecture.md)       |
+| CLI Reference              | [docs/cli.md](./docs/cli.md)                         |
+| FAQ                        | [docs/faq.md](./docs/faq.md)                         |
+| Security & Privacy         | [docs/security.md](./docs/security.md)               |
+| Roadmap                    | [ROADMAP.md](./ROADMAP.md)                           |
+| Development & Contributing | [docs/development.md](./docs/development.md)         |
 
 Full documentation lives in the [`docs/`](./docs) folder.
 
@@ -115,15 +117,36 @@ Full documentation lives in the [`docs/`](./docs) folder.
 
 This is a monorepo containing the following main packages:
 
-| Package                    | Description                                      |
-|---------------------------|--------------------------------------------------|
-| `@wayfinder/core`         | Core schema, graph validation, runtime contract, and reference handler |
-| `@wayfinder/cli`          | `assist` CLI (`init`, `discover`, `compile`, `gate`) |
-| `@wayfinder/providers`    | LLM provider abstraction (OpenAI, Anthropic, Ollama, mock) |
-| `@wayfinder/widget`       | Framework-agnostic `<assist-widget>` Web Component |
-| `@wayfinder/adapter-nextjs` | Next.js adapter (App Router discover, React wrapper, command bus) |
+| Package                     | Description                                                            |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `@wayfinder/core`           | Core schema, graph validation, runtime contract, and reference handler |
+| `@wayfinder/cli`            | `assist` CLI (`init`, `discover`, `compile`, `gate`)                   |
+| `@wayfinder/providers`      | LLM provider abstraction (OpenAI, Anthropic, Ollama, mock)             |
+| `@wayfinder/widget`         | Framework-agnostic `<assist-widget>` Web Component                     |
+| `@wayfinder/adapter-nextjs` | Next.js adapter (App Router discover, React wrapper, command bus)      |
+| `@wayfinder/adapter-remix`  | Remix adapter (`createRemixAssistHandler`)                             |
+| `@wayfinder/eslint-plugin`  | ESLint rule: warn on unregistered interactive controls                 |
 
 Each package has its own README with more details.
+
+## CI/CD Workflows
+
+Wayfinder ships two GitHub Actions workflows:
+
+### Drift Gate (`drift-gate.yml`) — key-free, runs on every PR
+
+Checks that the committed `capability_graph.json` structure hash still matches
+the current source. Requires no API keys. Fails if someone changes a route without
+recompiling.
+
+### Compile (`compile.yml`) — keyed, on-demand or nightly
+
+Re-runs the full LLM-powered compile pipeline and commits the updated graph back.
+Triggered manually via `workflow_dispatch` (with optional `app_dir` input) or on
+a weekly schedule.
+
+**Setup:** add your provider API key as a repository secret named
+`WAYFINDER_PROVIDER_KEY`.
 
 ## Current Status
 
@@ -147,4 +170,4 @@ MIT
   </a>
 </p>
 
-*If Wayfinder helps you, please consider starring the repo — it helps others discover it!*
+_If Wayfinder helps you, please consider starring the repo — it helps others discover it!_

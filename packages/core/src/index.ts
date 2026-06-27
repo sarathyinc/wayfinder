@@ -14,4 +14,11 @@ export { handleAssistChat } from "./runtime/handler.js";
 
 // compile utilities
 export { hashString, computeGraphStructureHash } from "./compile/hash.js";
-export { defineAction, defineTask, getRegisteredAnnotations } from "./annotations.js";
+export {
+  defineAction,
+  defineTask,
+  getRegisteredAnnotations,
+  _resetRegistry,
+  type ActionAnnotation,
+  type TaskAnnotation,
+} from "./annotations.js";

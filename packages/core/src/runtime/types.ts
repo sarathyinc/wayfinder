@@ -1,4 +1,9 @@
-import type { CapabilityGraph, Action, Field, LocalizedText } from "../schema/index.js";
+import type {
+  CapabilityGraph,
+  Action,
+  Field,
+  LocalizedText,
+} from "../schema/index.js";
 
 // ---------------------------------------------------------------------------
 // Public runtime contract (POST /assist/chat)
@@ -6,7 +11,6 @@ import type { CapabilityGraph, Action, Field, LocalizedText } from "../schema/in
 
 export interface AssistChatRequest {
   query: string;
-  persona: string; // derived server-side from session, never trusted from client
   locale?: string;
   context?: {
     route?: string;
@@ -15,12 +19,26 @@ export interface AssistChatRequest {
 }
 
 export type AssistChatResponse =
-  | { kind: "guide"; actionId: string; steps: LocalizedText[]; route: string; spotlight?: string[] }
+  | {
+      kind: "guide";
+      actionId: string;
+      steps: LocalizedText[];
+      route: string;
+      spotlight?: string[];
+    }
   | { kind: "navigate"; route: string; spotlight?: string[] }
   | { kind: "field"; label: LocalizedText; page: string; tab?: string | null }
-  | { kind: "disambiguate"; candidates: Array<{ id?: string; label: LocalizedText; page?: string; kind: "action" | "field" }> }
+  | {
+      kind: "disambiguate";
+      candidates: Array<{
+        id?: string;
+        label: LocalizedText;
+        page?: string;
+        kind: "action" | "field" | "page";
+      }>;
+    }
   | { kind: "drive"; actionId: string; prefill?: Record<string, unknown> }
-  | { kind: "refuse"; reason: "off_topic" | "sensitive" | "unknown" };
+  | { kind: "refuse"; reason: "off_topic" | "sensitive" };
 
 // ---------------------------------------------------------------------------
 // Persona filtering (security boundary — fail closed)
@@ -60,17 +78,17 @@ export function filterGraphForPersonas(
 
   const fields = graph.fields.filter(
     (f) =>
-      allowedRoutes.has(f.page) &&
-      f.personas.some((role) => allowed.has(role)),
+      allowedRoutes.has(f.page) && f.personas.some((role) => allowed.has(role)),
   );
 
   const transitions = graph.transitions.filter(
     (t) => allowedRoutes.has(t.from) && allowedRoutes.has(t.to),
   );
 
-  const tasks = graph.tasks.filter((t) =>
-    t.personas.some((role) => allowed.has(role)) &&
-    t.sequence.every((id) => allowedActionIds.has(id)),
+  const tasks = graph.tasks.filter(
+    (t) =>
+      t.personas.some((role) => allowed.has(role)) &&
+      t.sequence.every((id) => allowedActionIds.has(id)),
   );
 
   return {
@@ -92,8 +110,6 @@ export function isAssistChatRequest(x: unknown): x is AssistChatRequest {
     typeof x === "object" &&
     x !== null &&
     "query" in x &&
-    typeof (x as any).query === "string" &&
-    "persona" in x &&
-    typeof (x as any).persona === "string"
+    typeof (x as { query?: unknown }).query === "string"
   );
 }

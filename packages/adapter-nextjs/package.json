@@ -14,7 +14,9 @@
       "import": "./dist/react/AssistWidget.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
@@ -22,7 +24,13 @@
   },
   "peerDependencies": {
     "react": "^18 || ^19",
-    "next": "^14 || ^15"
+    "next": "^14 || ^15",
+    "playwright": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@wayfinder/core": "workspace:*",

@@ -1,4 +1,5 @@
 import type { Manifest, ManifestRoute, ManifestTransition } from "./types.js";
+export { deriveAvailable } from "./available.js";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
@@ -10,7 +11,10 @@ export type { Manifest, ManifestRoute, ManifestTransition } from "./types.js";
  * Redaction must already have been applied to the content.
  */
 export function hashSource(content: string): string {
-  return createHash("sha256").update(content, "utf8").digest("hex").slice(0, 16);
+  return createHash("sha256")
+    .update(content, "utf8")
+    .digest("hex")
+    .slice(0, 16);
 }
 
 /**
@@ -39,7 +43,10 @@ export function redactSource(
  * Naive transition extractor (regex on source).
  * Real adapters should do proper AST walking.
  */
-export function extractTransitionsFromSource(source: string, routeKey: string): ManifestTransition[] {
+export function extractTransitionsFromSource(
+  source: string,
+  routeKey: string,
+): ManifestTransition[] {
   const transitions: ManifestTransition[] = [];
   const hrefRe = /href=["'`]([^"'`]+)["'`]/g;
   const pushRe = /push\(["'`]([^"'`]+)["'`]\)/g;
