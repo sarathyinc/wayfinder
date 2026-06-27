@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <!-- Icon only: Code Lines to Chat symbol -->
+  <!-- Code lines -->
+  <g stroke="#64748B" stroke-width="4" stroke-linecap="round" opacity="0.75">
+    <path d="M18 30 L42 30"/>
+    <path d="M18 48 L52 48"/>
+    <path d="M18 66 L34 66"/>
+    <!-- Code brackets -->
+    <path d="M10 24 L10 72 M62 24 L62 72"/>
+  </g>
+  <!-- Chat bubble -->
+  <path d="M70 22 Q70 12 80 12 L120 12 Q130 12 130 22 L130 72 Q130 82 120 82 L88 82 L72 98 L78 82 Q70 82 70 72 Z" 
+        fill="none" stroke="#3B82F6" stroke-width="7"/>
+  <!-- AI neural accents -->
+  <g stroke="#8B5CF6" stroke-width="3.5" stroke-linecap="round" opacity="0.9">
+    <path d="M85 32 L100 42"/>
+    <path d="M92 56 L108 38"/>
+    <circle cx="95" cy="40" r="4" fill="#8B5CF6"/>
+  </g>
+  <!-- Emergent path / guidance arrow -->
+  <path d="M135 48 Q155 36 180 48" stroke="#3B82F6" stroke-width="7" stroke-linecap="round"/>
+  <path d="M180 48 L205 48" stroke="#0F172A" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="212 48 192 40 192 56" fill="#0F172A"/>
+</svg>

@@ -1,5 +1,7 @@
 # @wayfinder/core
 
+<img src="../../logos/icon-128.png" alt="Wayfinder" width="64" style="vertical-align: middle;" />
+
 The normative capability-graph schema and validation library for the Wayfinder AI-onboarding framework.
 
 `@wayfinder/core` owns the single source of truth for the `CapabilityGraph` data model — the Zod schema that produces TypeScript types and a JSON Schema artifact — plus the `validateGraph` / `loadGraph` runtime that enforces both structural and referential integrity.
