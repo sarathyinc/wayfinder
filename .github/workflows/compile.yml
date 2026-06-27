@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: write # needed to push the regenerated graph back
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: pnpm/action-setup@a3252b7022a23667b20c72bc0d05a7e7b4b41434 # v4.1.0
