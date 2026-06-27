@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { createProvider } from "@wayfinder/providers";
 import {
   loadGraph,
@@ -7,8 +7,41 @@ import {
   type CapabilityGraph,
   type CompileProvider,
   deriveAvailable,
+  getRegisteredAnnotations,
 } from "@wayfinder/core";
 import { discoverCommand } from "./discover.js";
+
+// Candidates for the host-provided annotations file, in priority order.
+const ANNOTATION_CANDIDATES = [
+  "assist-annotations.ts",
+  "assist-annotations.js",
+  "src/assist-annotations.ts",
+  "src/assist-annotations.js",
+];
+
+/**
+ * Locate and execute the project's annotation file (if any) so that
+ * defineAction / defineTask calls populate the in-process registry.
+ *
+ * We use a plain dynamic import() so the loaded module shares the same module
+ * realm as the CLI process (and vitest in tests). The `pathToFileURL` form
+ * avoids platform-specific path issues with dynamic import on Windows/ESM.
+ */
+async function loadAnnotationsFile(root: string): Promise<void> {
+  const { pathToFileURL } = await import("node:url");
+
+  for (const candidate of ANNOTATION_CANDIDATES) {
+    const annotationsPath = resolve(root, candidate);
+    if (!existsSync(annotationsPath)) continue;
+
+    try {
+      await import(pathToFileURL(annotationsPath).href);
+    } catch {
+      // Annotation file is optional — silently skip on load errors.
+    }
+    return; // only load the first match
+  }
+}
 
 export async function compileCommand(
   dir = ".",
@@ -128,6 +161,51 @@ export async function compileCommand(
 
   const finalTasks = (cache.tasks?.tasks ?? []) as CapabilityGraph["tasks"];
 
+  // ---------------------------------------------------------------------------
+  // Annotation merge (G7): load annotations file and apply overrides last
+  // ---------------------------------------------------------------------------
+  await loadAnnotationsFile(root);
+  const { actions: annotatedActions, tasks: annotatedTasks } =
+    getRegisteredAnnotations();
+
+  // Apply action annotation overrides
+  for (const ann of Object.values(annotatedActions)) {
+    const idx = actions.findIndex((a) => a.id === ann.id);
+    const existing = idx !== -1 ? actions[idx] : undefined;
+    if (idx !== -1 && existing !== undefined) {
+      // Rebuild the action with annotation fields taking precedence.
+      actions[idx] = {
+        id: existing.id,
+        route: existing.route,
+        personas: existing.personas,
+        label: ann.label ?? existing.label,
+        steps: ann.steps ?? existing.steps,
+        synonyms: ann.synonyms ?? existing.synonyms,
+        spotlight: ann.spotlight ?? existing.spotlight,
+        effect: ann.effect ?? existing.effect,
+        params: ann.params ?? existing.params,
+        execution:
+          ann.execution !== undefined ? ann.execution : existing.execution,
+      };
+    }
+  }
+
+  // Apply task annotation overrides (annotated wins; add if missing)
+  const mergedTasks: CapabilityGraph["tasks"] = finalTasks.filter(
+    (t) => !(t.id in annotatedTasks),
+  );
+  for (const ann of Object.values(annotatedTasks)) {
+    mergedTasks.push({
+      id: ann.id,
+      title: ann.title ?? ann.id,
+      personas: ann.personas ?? [],
+      goal: ann.goal,
+      sequence: ann.sequence ?? [],
+      source: "annotated" as const,
+      confidence: ann.confidence,
+    });
+  }
+
   const graph: CapabilityGraph = {
     version: 2,
     defaultLocale: "en",
@@ -135,7 +213,7 @@ export async function compileCommand(
     actions,
     fields,
     transitions,
-    tasks: finalTasks,
+    tasks: mergedTasks,
   };
 
   mkdirSync(join(root, ".assist"), { recursive: true });
@@ -146,6 +224,6 @@ export async function compileCommand(
   writeFileSync(cachePath, JSON.stringify(cache, null, 2) + "\n");
 
   console.log(
-    `[assist] Wrote capability_graph.json with ${actions.length} actions and ${finalTasks.length} tasks.`,
+    `[assist] Wrote capability_graph.json with ${actions.length} actions and ${mergedTasks.length} tasks.`,
   );
 }

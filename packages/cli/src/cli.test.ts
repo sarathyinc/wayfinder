@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { CompileProvider } from "@wayfinder/core";
+import { _resetRegistry, defineAction, defineTask } from "@wayfinder/core";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -225,6 +226,170 @@ describe("gate: structure-hash check", () => {
       // Gate should pass
       await expect(gateCommand(dir)).resolves.not.toThrow();
     } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Annotation merge tests (G7)
+// ---------------------------------------------------------------------------
+
+describe("compile: annotation merge", () => {
+  beforeEach(() => {
+    _resetRegistry();
+  });
+
+  it("annotation overrides LLM label and steps for same action id", async () => {
+    const dir = makeProjectDir();
+    try {
+      writePageFile(dir, "dashboard/page.tsx", DASHBOARD_PAGE);
+
+      // Populate the registry directly — same module realm as compileCommand.
+      // (File-based loading is the production path; registry-direct is the
+      // unit-test path since vite-node can't resolve deps from a tmpdir file.)
+      defineAction({
+        id: "dashboard.view",
+        label: "Annotated Dashboard Label",
+        steps: ["step from annotation"],
+      });
+
+      const { compileCommand } = await import("./commands/compile.js");
+
+      const provider: CompileProvider = {
+        name: "mock",
+        compilePerRoute: vi.fn().mockResolvedValue({
+          description: "LLM Dashboard",
+          steps: ["llm step"],
+          fields: [],
+          synonyms: [],
+        }),
+        suggestTasks: vi.fn().mockResolvedValue([]),
+        matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
+      };
+
+      await compileCommand(dir, { _provider: provider });
+
+      const graph = JSON.parse(
+        (await import("node:fs")).readFileSync(
+          join(dir, "capability_graph.json"),
+          "utf8",
+        ),
+      );
+
+      const dashAction = graph.actions.find(
+        (a: { id: string }) => a.id === "dashboard.view",
+      );
+      expect(dashAction).toBeDefined();
+      expect(dashAction.label).toBe("Annotated Dashboard Label");
+      expect(dashAction.steps).toEqual(["step from annotation"]);
+    } finally {
+      _resetRegistry();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("annotated task wins over suggested task with same id", async () => {
+    const dir = makeProjectDir();
+    try {
+      writePageFile(dir, "dashboard/page.tsx", DASHBOARD_PAGE);
+
+      // Populate registry directly.
+      defineTask({
+        id: "view-dashboard",
+        title: "Annotated Task Title",
+        personas: ["admin"],
+        sequence: ["dashboard.view"],
+        source: "annotated",
+      });
+
+      const { compileCommand } = await import("./commands/compile.js");
+
+      const provider: CompileProvider = {
+        name: "mock",
+        compilePerRoute: vi.fn().mockResolvedValue({
+          description: "Dashboard",
+          steps: [],
+          fields: [],
+          synonyms: [],
+        }),
+        suggestTasks: vi.fn().mockResolvedValue([
+          {
+            id: "view-dashboard",
+            title: "LLM Suggested Task",
+            personas: ["user"],
+            sequence: ["dashboard.view"],
+            confidence: 0.7,
+          },
+        ]),
+        matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
+      };
+
+      await compileCommand(dir, { _provider: provider });
+
+      const graph = JSON.parse(
+        (await import("node:fs")).readFileSync(
+          join(dir, "capability_graph.json"),
+          "utf8",
+        ),
+      );
+
+      const tasks = graph.tasks.filter(
+        (t: { id: string }) => t.id === "view-dashboard",
+      );
+      // Only one task with this id (annotation wins, deduped)
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].title).toBe("Annotated Task Title");
+      expect(tasks[0].source).toBe("annotated");
+    } finally {
+      _resetRegistry();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("duplicate action id detection still works after annotation merge", async () => {
+    const dir = makeProjectDir();
+    try {
+      writePageFile(dir, "dashboard/page.tsx", DASHBOARD_PAGE);
+
+      const { compileCommand } = await import("./commands/compile.js");
+      const { validateGraph } = await import("@wayfinder/core");
+
+      const provider: CompileProvider = {
+        name: "mock",
+        compilePerRoute: vi.fn().mockResolvedValue({
+          description: "Dashboard",
+          steps: [],
+          fields: [],
+          synonyms: [],
+        }),
+        suggestTasks: vi.fn().mockResolvedValue([]),
+        matchIntent: vi.fn().mockResolvedValue({ kind: "app_unknown" }),
+      };
+
+      await compileCommand(dir, { _provider: provider });
+
+      const graph = JSON.parse(
+        (await import("node:fs")).readFileSync(
+          join(dir, "capability_graph.json"),
+          "utf8",
+        ),
+      );
+
+      // Manually inject a duplicate action
+      graph.actions.push({ ...graph.actions[0] });
+
+      const result = validateGraph(graph);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(
+          result.errors.some((e) =>
+            e.message.toLowerCase().includes("duplicate"),
+          ),
+        ).toBe(true);
+      }
+    } finally {
+      _resetRegistry();
       rmSync(dir, { recursive: true, force: true });
     }
   });
