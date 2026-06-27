@@ -145,4 +145,110 @@ describe("handleAssistChat", () => {
     });
     expect(res.kind).toBe("refuse");
   });
+
+  // G2: in-scope but unmatched → disambiguate with page candidates, never refuse
+  it("in-scope unmatched app_unknown → disambiguate with page candidates", async () => {
+    const provider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        return { kind: "app_unknown" };
+      },
+    };
+    const res = await handleAssistChat(
+      { query: "do something unrecognized" },
+      {},
+      { graph: mockGraph, provider, getPersonas: () => ["intake_admin"] },
+    );
+    expect(res.kind).toBe("disambiguate");
+    if (res.kind === "disambiguate") {
+      expect(res.candidates.length).toBeGreaterThan(0);
+      expect(res.candidates[0]?.kind).toBe("page");
+    }
+  });
+
+  it("in-scope unmatched app_action (no match found) → disambiguate not refuse", async () => {
+    const provider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        return { kind: "app_action", id: "nonexistent.action" };
+      },
+    };
+    const res = await handleAssistChat(
+      { query: "delete everything" },
+      {},
+      { graph: mockGraph, provider, getPersonas: () => ["intake_admin"] },
+    );
+    expect(res.kind).toBe("disambiguate");
+    if (res.kind === "disambiguate") {
+      expect(res.candidates.every((c) => c.kind === "page")).toBe(true);
+    }
+  });
+
+  it("in-scope unmatched field_location (no match found) → disambiguate not refuse", async () => {
+    const provider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        return { kind: "field_location", id: "Nonexistent Field" };
+      },
+    };
+    const res = await handleAssistChat(
+      { query: "where is something unknown" },
+      {},
+      { graph: mockGraph, provider, getPersonas: () => ["intake_admin"] },
+    );
+    expect(res.kind).toBe("disambiguate");
+    if (res.kind === "disambiguate") {
+      expect(res.candidates.every((c) => c.kind === "page")).toBe(true);
+    }
+  });
+
+  it("off_topic LLM classification → refuse with reason off_topic", async () => {
+    const provider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        return { kind: "off_topic" };
+      },
+    };
+    const res = await handleAssistChat(
+      { query: "who won the world cup" },
+      {},
+      { graph: mockGraph, provider, getPersonas: () => ["intake_admin"] },
+    );
+    expect(res.kind).toBe("refuse");
+    if (res.kind === "refuse") expect(res.reason).toBe("off_topic");
+  });
+
+  it("sensitive LLM classification → refuse with reason sensitive", async () => {
+    const provider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        return { kind: "sensitive" };
+      },
+    };
+    const res = await handleAssistChat(
+      { query: "patient ssn lookup" },
+      {},
+      { graph: mockGraph, provider, getPersonas: () => ["intake_admin"] },
+    );
+    expect(res.kind).toBe("refuse");
+    if (res.kind === "refuse") expect(res.reason).toBe("sensitive");
+  });
+
+  it("provider failure (throws) → disambiguate with page candidates, not refuse", async () => {
+    const provider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        throw new Error("network timeout");
+      },
+    };
+    const res = await handleAssistChat(
+      { query: "do something unrecognized" },
+      {},
+      { graph: mockGraph, provider, getPersonas: () => ["intake_admin"] },
+    );
+    expect(res.kind).toBe("disambiguate");
+    if (res.kind === "disambiguate") {
+      expect(res.candidates[0]?.kind).toBe("page");
+    }
+  });
 });

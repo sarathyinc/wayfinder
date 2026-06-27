@@ -1,4 +1,4 @@
-import type { CapabilityGraph } from "../schema/index.js";
+import type { CapabilityGraph, Page } from "../schema/index.js";
 import type { CompileProvider } from "../providers/types.js";
 import type { AssistChatRequest, AssistChatResponse } from "./types.js";
 import { filterGraphForPersonas } from "./types.js";
@@ -24,7 +24,6 @@ export async function handleAssistChat(
   const filtered = filterGraphForPersonas(ctx.graph, personas);
 
   if (filtered.actions.length === 0 && filtered.fields.length === 0) {
-    // TODO G2: replace with name-the-page response once that path is implemented
     return { kind: "refuse", reason: "off_topic" };
   }
 
@@ -99,14 +98,25 @@ export async function handleAssistChat(
       }
     }
   } catch {
-    // provider failure → graceful refusal instead of leaking errors
+    // provider failure → fall through to name-the-page disambiguate
   }
 
-  // TODO G2: replace with name-the-page response once that path is implemented
-  return { kind: "refuse", reason: "off_topic" };
+  // G2: in-scope but unmatched → name the page (never refuse a real app question)
+  return buildNameThePageResponse(filtered.pages);
 }
 
 function normalize(t: string | Record<string, string>): string {
   if (typeof t === "string") return t.toLowerCase();
   return (t.en ?? Object.values(t)[0] ?? "").toLowerCase();
+}
+
+const MAX_PAGE_CANDIDATES = 5;
+
+function buildNameThePageResponse(pages: Page[]): AssistChatResponse {
+  const candidates = pages.slice(0, MAX_PAGE_CANDIDATES).map((p) => ({
+    kind: "page" as const,
+    label: p.title,
+    page: p.routeKey,
+  }));
+  return { kind: "disambiguate", candidates };
 }

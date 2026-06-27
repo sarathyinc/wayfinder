@@ -34,7 +34,7 @@ export type AssistChatResponse =
         id?: string;
         label: LocalizedText;
         page?: string;
-        kind: "action" | "field";
+        kind: "action" | "field" | "page";
       }>;
     }
   | { kind: "drive"; actionId: string; prefill?: Record<string, unknown> }
