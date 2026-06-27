@@ -1,0 +1,36 @@
+name: Compile Capability Graph
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_dir:
+        description: "App directory to compile (default: examples/nextjs-demo)"
+        required: false
+        default: "examples/nextjs-demo"
+  schedule:
+    - cron: "0 2 * * 1" # optional nightly — Monday 2 AM UTC
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed to push the regenerated graph back
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install
+      - run: pnpm --filter @wayfinder/core build
+      - run: pnpm --filter @wayfinder/cli build
+      - name: Compile
+        run: pnpm --filter @wayfinder/cli run dev:assist -- compile ${{ inputs.app_dir || 'examples/nextjs-demo' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.WAYFINDER_PROVIDER_KEY }}
+      - name: Commit updated graph
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add capability_graph.json compile_cache.json || true
+          git diff --cached --quiet || git commit -m "chore: regenerate capability graph [skip ci]"
+          git push
