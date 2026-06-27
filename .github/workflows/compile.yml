@@ -16,17 +16,20 @@ jobs:
     permissions:
       contents: write # needed to push the regenerated graph back
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@a3252b7022a23667b20c72bc0d05a7e7b4b41434 # v4.1.0
       - run: pnpm install
       - run: pnpm --filter @wayfinder/core build
       - run: pnpm --filter @wayfinder/cli build
       - name: Compile
-        run: pnpm --filter @wayfinder/cli run dev:assist -- compile ${{ inputs.app_dir || 'examples/nextjs-demo' }}
+        # APP_DIR is set as an env var (not interpolated into the shell command)
+        # to prevent script injection via a malicious workflow_dispatch input.
         env:
+          APP_DIR: ${{ inputs.app_dir || 'examples/nextjs-demo' }}
           OPENAI_API_KEY: ${{ secrets.WAYFINDER_PROVIDER_KEY }}
+        run: pnpm --filter @wayfinder/cli run dev:assist -- compile "$APP_DIR"
       - name: Commit updated graph
         run: |
           git config user.name "github-actions[bot]"
