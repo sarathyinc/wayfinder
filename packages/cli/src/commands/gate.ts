@@ -1,5 +1,5 @@
 import { discoverCommand } from "./discover.js";
-import { loadGraph } from "@wayfinder/core";
+import { loadGraph, computeGraphStructureHash } from "@wayfinder/core";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -15,18 +15,18 @@ export async function gateCommand(dir = ".") {
   try {
     graphJson = readFileSync(graphPath, "utf8");
   } catch {
-    console.error("No capability_graph.json found. Run 'assist compile' first.");
-    process.exit(1);
+    throw new Error(
+      "No capability_graph.json found. Run 'assist compile' first.",
+    );
   }
 
   const loaded = loadGraph(graphJson);
   if (!loaded.ok) {
-    console.error("Graph load failed:", loaded.errors);
-    process.exit(1);
+    throw new Error(`Graph load failed: ${JSON.stringify(loaded.errors)}`);
   }
 
   const cache = JSON.parse(readFileSync(cachePath, "utf8"));
-  const currentHashes = new Set(manifest.routes.map(r => r.sourceHash));
+  const currentHashes = new Set(manifest.routes.map((r) => r.sourceHash));
   let missing = 0;
 
   for (const h of currentHashes) {
@@ -37,8 +37,16 @@ export async function gateCommand(dir = ".") {
   }
 
   if (missing > 0) {
-    console.error(`Drift detected: ${missing} routes not compiled.`);
-    process.exit(1);
+    throw new Error(`Drift detected: ${missing} routes not compiled.`);
+  }
+
+  // Check that the structure hash for the flow pass is present in the cache
+  const graph = loaded.graph;
+  const structureHash = computeGraphStructureHash(graph);
+  if (cache.tasks?.structureHash !== structureHash) {
+    throw new Error(
+      `Drift detected: structure hash mismatch. Run 'assist compile' to regenerate tasks.`,
+    );
   }
 
   console.log("Gate passed. No drift.");

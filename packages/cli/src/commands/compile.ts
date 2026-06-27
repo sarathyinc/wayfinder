@@ -5,13 +5,14 @@ import {
   loadGraph,
   computeGraphStructureHash,
   type CapabilityGraph,
+  type CompileProvider,
   deriveAvailable,
 } from "@wayfinder/core";
 import { discoverCommand } from "./discover.js";
 
 export async function compileCommand(
   dir = ".",
-  options: { provider?: string } = {},
+  options: { provider?: string; _provider?: CompileProvider } = {},
 ) {
   const root = dir;
   const providerName = (options.provider || "mock") as
@@ -20,22 +21,32 @@ export async function compileCommand(
 
   const manifest = await discoverCommand(root);
 
-  const provider = createProvider({ provider: providerName });
+  const provider: CompileProvider =
+    options._provider ?? createProvider({ provider: providerName });
 
   const cachePath = join(root, ".assist", "compile_cache.json");
-  let cache: any = { routes: {}, tasks: undefined };
+  let cache: {
+    routes: Record<string, unknown>;
+    tasks?: { structureHash: string; tasks: unknown[] };
+  } = { routes: {}, tasks: undefined };
   try {
     cache = JSON.parse(readFileSync(cachePath, "utf8"));
   } catch {}
 
-  const pages: any[] = [];
-  const actions: any[] = [];
-  const fields: any[] = [];
+  const pages: CapabilityGraph["pages"] = [];
+  const actions: CapabilityGraph["actions"] = [];
+  const fields: CapabilityGraph["fields"] = [];
   const transitions = manifest.transitions;
 
   for (const r of manifest.routes) {
-    const cached = cache.routes?.[r.sourceHash];
+    const cached = cache.routes?.[r.sourceHash] as
+      { steps?: string[] } | undefined;
     const available = deriveAvailable(r.routeKey, r.sourceBundle);
+
+    const actionId = `${r.routeKey.replace(/\//g, ".")}.view`.replace(
+      /^\./,
+      "",
+    );
 
     if (cached) {
       // use cache
@@ -46,7 +57,7 @@ export async function compileCommand(
         available,
       });
       actions.push({
-        id: `${r.routeKey}.view`,
+        id: actionId,
         route: r.routeKey,
         label: r.title || "View",
         personas: r.personas,
@@ -55,6 +66,7 @@ export async function compileCommand(
         synonyms: [],
         steps: cached.steps || [],
         spotlight: [],
+        execution: null,
       });
       continue;
     }
@@ -73,7 +85,7 @@ export async function compileCommand(
       available,
     });
     actions.push({
-      id: `${r.routeKey.replace(/\//g, ".")}.view`,
+      id: actionId,
       route: r.routeKey,
       label: compiled.description || r.routeKey,
       personas: r.personas,
@@ -82,39 +94,39 @@ export async function compileCommand(
       synonyms: compiled.synonyms || [],
       steps: compiled.steps || [],
       spotlight: [],
+      execution: null,
     });
   }
 
-  // Always run flow pass for Phase 2 (suggested tasks)
-  const suggested = await provider.suggestTasks({
-    actions: actions.map((a) => ({
-      id: a.id,
-      route: a.route,
-      personas: a.personas,
-    })),
+  // Compute real structure hash from the built graph structure
+  const structureHash = computeGraphStructureHash({
+    version: 2,
+    defaultLocale: "en",
+    pages,
+    actions,
+    fields,
     transitions,
-    personas: ["user", "intake_admin", "admin"],
+    tasks: [],
   });
-  const tasks = suggested.map((s) => ({ ...s, source: "suggested" as const }));
-  cache.tasks = { structureHash: "demo", tasks };
 
-  const finalTasks =
-    tasks.length > 0
-      ? tasks
-      : [
-          {
-            id: "first-donor-offer",
-            title: "Log your first donor offer",
-            personas: ["intake_admin"],
-            goal: "Get a donor offer into the system",
-            sequence:
-              actions.length > 1
-                ? [actions[0].id, actions[1]?.id || actions[0].id]
-                : [],
-            source: "suggested" as const,
-            confidence: 0.7,
-          },
-        ];
+  // Only re-run flow pass when structure has changed
+  if (cache.tasks?.structureHash !== structureHash) {
+    const suggested = await provider.suggestTasks({
+      actions: actions.map((a) => ({
+        id: a.id,
+        route: a.route,
+        personas: a.personas,
+      })),
+      transitions,
+      personas: ["user", "intake_admin", "admin"],
+    });
+    cache.tasks = {
+      structureHash,
+      tasks: suggested.map((s) => ({ ...s, source: "suggested" as const })),
+    };
+  }
+
+  const finalTasks = (cache.tasks?.tasks ?? []) as CapabilityGraph["tasks"];
 
   const graph: CapabilityGraph = {
     version: 2,
