@@ -27,6 +27,18 @@ const mockGraph: CapabilityGraph = {
       spotlight: [],
       execution: null,
     },
+    {
+      id: "donors.view",
+      route: "/donors",
+      label: "View donor list",
+      personas: ["intake_admin"],
+      effect: "navigate",
+      params: [],
+      synonyms: [],
+      steps: ["Go to Donors"],
+      spotlight: [],
+      execution: { navigate: "/donors", tier: "command-bus" },
+    },
   ],
   fields: [
     {
@@ -250,5 +262,100 @@ describe("handleAssistChat", () => {
     if (res.kind === "disambiguate") {
       expect(res.candidates[0]?.kind).toBe("page");
     }
+  });
+
+  // G8: ASSIST_AGENTIC_ENABLED kill-switch
+  describe("agentic kill-switch (G8)", () => {
+    const driveProvider: CompileProvider = {
+      ...mockProvider,
+      async matchIntent() {
+        return { kind: "app_action", id: "donors.view", confidence: 0.95 };
+      },
+    };
+
+    it("flag OFF: high-confidence non-write action with execution → guide (not drive)", async () => {
+      delete process.env.ASSIST_AGENTIC_ENABLED;
+      const res = await handleAssistChat(
+        { query: "show donors" },
+        {},
+        {
+          graph: mockGraph,
+          provider: driveProvider,
+          getPersonas: () => ["intake_admin"],
+        },
+      );
+      expect(res.kind).toBe("guide");
+      if (res.kind === "guide") {
+        expect(res.actionId).toBe("donors.view");
+      }
+    });
+
+    it("flag ON: high-confidence non-write action with non-null execution → drive", async () => {
+      process.env.ASSIST_AGENTIC_ENABLED = "1";
+      try {
+        const res = await handleAssistChat(
+          { query: "show donors" },
+          {},
+          {
+            graph: mockGraph,
+            provider: driveProvider,
+            getPersonas: () => ["intake_admin"],
+          },
+        );
+        expect(res.kind).toBe("drive");
+        if (res.kind === "drive") {
+          expect(res.actionId).toBe("donors.view");
+          expect(res.prefill).toEqual({});
+        }
+      } finally {
+        delete process.env.ASSIST_AGENTIC_ENABLED;
+      }
+    });
+
+    it("flag ON: high-confidence WRITE action → guide (never auto-submit)", async () => {
+      process.env.ASSIST_AGENTIC_ENABLED = "1";
+      const writeProvider: CompileProvider = {
+        ...mockProvider,
+        async matchIntent() {
+          return { kind: "app_action", id: "donors.create", confidence: 0.95 };
+        },
+      };
+      try {
+        const res = await handleAssistChat(
+          { query: "log a new donor" },
+          {},
+          {
+            graph: mockGraph,
+            provider: writeProvider,
+            getPersonas: () => ["intake_admin"],
+          },
+        );
+        expect(res.kind).toBe("guide");
+        if (res.kind === "guide") {
+          expect(res.actionId).toBe("donors.create");
+        }
+      } finally {
+        delete process.env.ASSIST_AGENTIC_ENABLED;
+      }
+    });
+
+    it("flag OFF snapshot: result is byte-identical to navigate+guide (same actionId, steps, route)", async () => {
+      delete process.env.ASSIST_AGENTIC_ENABLED;
+      const res = await handleAssistChat(
+        { query: "show donors" },
+        {},
+        {
+          graph: mockGraph,
+          provider: driveProvider,
+          getPersonas: () => ["intake_admin"],
+        },
+      );
+      expect(res.kind).toBe("guide");
+      if (res.kind === "guide") {
+        expect(res.actionId).toBe("donors.view");
+        expect(res.steps).toEqual(["Go to Donors"]);
+        expect(res.route).toBe("/donors");
+      }
+    });
   });
 });

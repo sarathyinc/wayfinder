@@ -54,6 +54,18 @@ export async function handleAssistChat(
     if (llm.kind === "app_action" && llm.id) {
       const action = filtered.actions.find((a) => a.id === llm.id);
       if (action) {
+        // Drive gate: only when flag on + execution hook exists + not a write + high confidence
+        const agenticEnabled = process.env.ASSIST_AGENTIC_ENABLED === "1";
+        if (
+          agenticEnabled &&
+          action.execution !== null &&
+          action.effect !== "write" &&
+          llm.confidence !== undefined &&
+          llm.confidence > 0.8
+        ) {
+          return { kind: "drive", actionId: action.id, prefill: {} };
+        }
+        // Default: guide (flag off, write effect, low confidence, or no execution hook)
         return {
           kind: "guide",
           actionId: action.id,
@@ -83,19 +95,6 @@ export async function handleAssistChat(
         kind: "refuse",
         reason: llm.kind === "off_topic" ? "off_topic" : "sensitive",
       };
-    }
-
-    // Phase 3 example: for high confidence non-write, could drive
-    if (
-      llm.kind === "app_action" &&
-      llm.id &&
-      llm.confidence &&
-      llm.confidence > 0.8
-    ) {
-      const action = filtered.actions.find((a) => a.id === llm.id);
-      if (action && action.effect !== "write") {
-        return { kind: "drive", actionId: action.id, prefill: {} };
-      }
     }
   } catch {
     // provider failure → fall through to name-the-page disambiguate
