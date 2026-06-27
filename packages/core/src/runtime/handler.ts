@@ -16,14 +16,16 @@ export interface HandleAssistContext {
 
 export async function handleAssistChat(
   req: AssistChatRequest,
+  session: unknown,
   ctx: HandleAssistContext,
 ): Promise<AssistChatResponse> {
   // 1. Persona filter (fail-closed security boundary)
-  const personas = ctx.getPersonas({}); // in real usage this receives the session
+  const personas = ctx.getPersonas(session);
   const filtered = filterGraphForPersonas(ctx.graph, personas);
 
   if (filtered.actions.length === 0 && filtered.fields.length === 0) {
-    return { kind: "refuse", reason: "unknown" };
+    // TODO G2: replace with name-the-page response once that path is implemented
+    return { kind: "refuse", reason: "off_topic" };
   }
 
   // 2. Deterministic matcher (fast path, no LLM)
@@ -64,7 +66,9 @@ export async function handleAssistChat(
     }
 
     if (llm.kind === "field_location" && llm.id) {
-      const field = filtered.fields.find((f) => normalize(f.label) === normalize(llm.id!));
+      const field = filtered.fields.find(
+        (f) => normalize(f.label) === normalize(llm.id!),
+      );
       if (field) {
         return {
           kind: "field",
@@ -76,12 +80,20 @@ export async function handleAssistChat(
     }
 
     if (llm.kind === "off_topic" || llm.kind === "sensitive") {
-      return { kind: "refuse", reason: llm.kind === "off_topic" ? "off_topic" : "sensitive" };
+      return {
+        kind: "refuse",
+        reason: llm.kind === "off_topic" ? "off_topic" : "sensitive",
+      };
     }
 
     // Phase 3 example: for high confidence non-write, could drive
-    if (llm.kind === "app_action" && llm.id && llm.confidence && llm.confidence > 0.8) {
-      const action = filtered.actions.find(a => a.id === llm.id);
+    if (
+      llm.kind === "app_action" &&
+      llm.id &&
+      llm.confidence &&
+      llm.confidence > 0.8
+    ) {
+      const action = filtered.actions.find((a) => a.id === llm.id);
       if (action && action.effect !== "write") {
         return { kind: "drive", actionId: action.id, prefill: {} };
       }
@@ -90,7 +102,8 @@ export async function handleAssistChat(
     // provider failure → graceful refusal instead of leaking errors
   }
 
-  return { kind: "refuse", reason: "unknown" };
+  // TODO G2: replace with name-the-page response once that path is implemented
+  return { kind: "refuse", reason: "off_topic" };
 }
 
 function normalize(t: string | Record<string, string>): string {
